@@ -8,6 +8,7 @@ export const SECTIONS = [
   { key: 'analytics', stage: 5, href: '/analytics/', icon: 'chart' },
   { key: 'ai', stage: 7, href: '/ai/', icon: 'spark' },
   { key: 'channels', stage: 3, href: '/channels/', icon: 'channel' },
+  { key: 'notifications', stage: 3, href: '/notifications/', icon: 'bell' },
   { key: 'ads', stage: 6, href: '/ads/', icon: 'megaphone' },
   { key: 'settings', stage: 3, href: '/settings/', icon: 'settings' },
 ] as const satisfies readonly { key: string; stage: number; href: string; icon: IconName }[];
@@ -31,10 +32,17 @@ export const TAB_OF: Record<SectionKey, 'overview' | 'posts' | 'analytics' | 'mo
   analytics: 'analytics',
   ai: 'more',
   channels: 'more',
+  notifications: 'more',
   ads: 'more',
   settings: 'more',
   more: 'more',
 };
 
 /** Разделы на странице «Ещё». */
-export const MORE_SECTIONS: readonly SectionKey[] = ['channels', 'ai', 'settings', 'ads'];
+export const MORE_SECTIONS: readonly SectionKey[] = [
+  'channels',
+  'notifications',
+  'ai',
+  'settings',
+  'ads',
+];

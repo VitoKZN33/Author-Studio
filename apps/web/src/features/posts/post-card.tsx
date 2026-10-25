@@ -5,7 +5,7 @@ import { useFormatter, useNow, useTranslations } from 'next-intl';
 import { Pill, type PillTone } from '@/shared/ui/kit';
 import { Thumb } from '@/shared/ui/thumb';
 import { useSystemInfo } from '../system/use-system-info';
-import { headlinePublication, type PostListItem, type PublicationStatus } from './types';
+import { headlinePublication, postHref, type PostListItem, type PublicationStatus } from './types';
 
 const TONE: Record<PublicationStatus, PillTone> = {
   scheduled: 'accent',
@@ -54,7 +54,7 @@ export function PostCard({
 
   return (
     <Link
-      href={`/posts/edit/?id=${item.id}`}
+      href={postHref(item)}
       className="flex flex-col overflow-hidden rounded-[16px] border border-border bg-surface active:scale-[0.99]"
     >
       <div className="relative">

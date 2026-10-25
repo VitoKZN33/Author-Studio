@@ -5,7 +5,6 @@ import { getLocale, getMessages } from 'next-intl/server';
 import type { ReactNode } from 'react';
 import { SessionProvider } from '@/features/session/session';
 import { THEME_BOOT } from '@/shared/theme';
-import '@fontsource-variable/manrope';
 import './globals.css';
 
 // Название продукта конфигурируется в настройках установки (APP_NAME).
@@ -14,6 +13,9 @@ export const metadata: Metadata = { title: 'Author Studio' };
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
+  // Без масштабирования: Mini App — приложение, а не страница (поля ввода ≥ 16 px).
+  maximumScale: 1,
+  userScalable: false,
   viewportFit: 'cover',
 };
 

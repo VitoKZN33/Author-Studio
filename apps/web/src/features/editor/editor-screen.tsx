@@ -346,9 +346,11 @@ function EditorLoaded({ initial }: { initial: PostView }) {
             timezone={timezone}
             problems={problems}
             saveNow={autosave.saveNow}
-            onPublished={(items) => {
+            onPublished={async (items) => {
               setPublications((ps) => [...ps, ...items]);
               setSheet(null);
+              await autosave.saveNow();
+              router.push(`/posts/view/?id=${initial.id}`);
             }}
           />
         </div>

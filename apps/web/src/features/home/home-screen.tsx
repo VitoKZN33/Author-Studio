@@ -150,7 +150,7 @@ export function HomeScreen() {
 
       {next[0] ? (
         <Link
-          href={`/posts/edit/?id=${next[0].postId}`}
+          href={`/posts/view/?id=${next[0].postId}`}
           className="flex items-center justify-between gap-3 rounded-[var(--radius-card)] bg-accent px-4 py-4 text-on-accent"
         >
           <span className="min-w-0">

@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { useFormatter, useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { useSession } from '../session/session';
@@ -8,7 +7,6 @@ import { useSystemInfo } from '../system/use-system-info';
 import { confirmAction } from '@/shared/telegram';
 import { PageHeader } from '@/shared/ui/kit';
 import { SystemStatus } from '../system/system-status';
-import { NotificationSettings } from './notification-settings';
 
 export function SettingsScreen() {
   const t = useTranslations('settings');
@@ -52,25 +50,6 @@ export function SettingsScreen() {
           </div>
         ))}
       </dl>
-      <Link
-        href="/channels/"
-        className="flex min-h-12 items-center justify-between rounded-[var(--radius-card)] border border-border bg-surface px-4 text-sm hover:border-border-strong"
-      >
-        {t('channelsLink')}
-        <span aria-hidden className="text-text-faint">
-          ›
-        </span>
-      </Link>
-      <Link
-        href="/ai/?tab=settings"
-        className="flex min-h-12 items-center justify-between rounded-[var(--radius-card)] border border-border bg-surface px-4 text-sm hover:border-border-strong"
-      >
-        {t('aiLink')}
-        <span aria-hidden className="text-text-faint">
-          ›
-        </span>
-      </Link>
-      <NotificationSettings />
       <SystemStatus />
       <div>
         <button

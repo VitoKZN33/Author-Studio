@@ -20,6 +20,7 @@ interface TelegramWebApp {
   enableClosingConfirmation?(): void;
   disableClosingConfirmation?(): void;
   onEvent?(event: 'themeChanged', handler: () => void): void;
+  disableVerticalSwipes?(): void;
   HapticFeedback?: { notificationOccurred(type: 'error' | 'success' | 'warning'): void };
 }
 
@@ -56,6 +57,9 @@ export function prepareTelegramUi(): void {
   if (!app) return;
   app.ready();
   app.expand();
+  // Свайп вниз по содержимому не сворачивает приложение (Bot API 7.7+);
+  // закрыть можно кнопкой или свайпом по шапке Telegram.
+  if (app.isVersionAtLeast('7.7')) app.disableVerticalSwipes?.();
   syncTheme(app);
   // Пользователь сменил тему Telegram, не закрывая приложение.
   app.onEvent?.('themeChanged', () => syncTheme(app));

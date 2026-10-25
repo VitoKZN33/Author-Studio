@@ -103,3 +103,9 @@ export function headlinePublication(
       .sort((a, b) => (b.publishedAt ?? '').localeCompare(a.publishedAt ?? ''))[0] ?? null
   );
 }
+
+/** Куда вести по нажатию на пост: черновик — в редактор, остальное — в просмотр. */
+export function postHref(item: { id: string; publications: { status: string }[] }): string {
+  const live = item.publications.some((p) => p.status !== 'cancelled');
+  return live ? `/posts/view/?id=${item.id}` : `/posts/edit/?id=${item.id}`;
+}

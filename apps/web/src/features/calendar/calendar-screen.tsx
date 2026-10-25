@@ -263,7 +263,7 @@ export function CalendarScreen() {
             {dayItems.map((p) => (
               <li key={p.id}>
                 <Link
-                  href={`/posts/edit/?id=${p.postId}`}
+                  href={`/posts/view/?id=${p.postId}`}
                   className="flex items-center gap-3 px-4 py-3 hover:bg-surface-2"
                 >
                   <span className="w-11 shrink-0 text-sm text-text-muted">{timeOf(p)}</span>

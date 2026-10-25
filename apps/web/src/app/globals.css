@@ -27,8 +27,10 @@
   --color-danger: #c8323f;
   --color-danger-soft: #fde7e9;
 
+  /* Системный шрифт платформы: SF Pro на iPhone и Mac, Roboto на Android, Segoe UI на Windows. */
   --font-sans:
-    'Manrope Variable', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    -apple-system, BlinkMacSystemFont, system-ui, 'SF Pro Text', 'Segoe UI', Roboto,
+    'Helvetica Neue', Arial, sans-serif;
   --radius-card: 18px;
   --radius-control: 12px;
 }
@@ -171,4 +173,17 @@ body {
 }
 .sheet-in {
   animation: sheet-in 0.18s ease-out;
+}
+
+/*
+ * iOS увеличивает страницу при фокусе на поле с шрифтом меньше 16 px.
+ * Поля ввода на сенсорных экранах — не меньше 16 px.
+ */
+@media (pointer: coarse) {
+  input,
+  textarea,
+  select,
+  [contenteditable='true'] {
+    font-size: max(16px, 1em) !important;
+  }
 }
