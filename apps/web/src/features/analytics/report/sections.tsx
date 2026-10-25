@@ -11,7 +11,7 @@ import { btn, inputCls } from '@/shared/ui/kit';
 import { SeriesTable, SubscribersChart } from '../charts';
 import { heatColor, heatIndex, heatText } from '../types';
 import { Bars, Card, CardTitle, Cell, Cells, Note, Section } from './ui';
-import { CHECKPOINTS, num, signedNum, type Change, type Report, type ReportPost } from './types';
+import { num, signedNum, type Change, type Report, type ReportPost } from './types';
 
 const WEEKDAYS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
 const SLOTS = ['0–3', '3–6', '6–9', '9–12', '12–15', '15–18', '18–21', '21–24'];
@@ -159,18 +159,7 @@ export function ReachSection({
         <Cell label={t('avgReactions')} value={num(x.avgReactions)} />
         <Cell label={t('measuredPosts')} value={`${x.postsWithViews} / ${x.posts.length}`} />
       </Cells>
-      <Card>
-        <CardTitle>{t('growth')}</CardTitle>
-        <div className="grid grid-cols-4 gap-1.5">
-          {CHECKPOINTS.map((h) => (
-            <div key={h} className="rounded-[10px] bg-surface-2 px-2 py-1.5 text-center">
-              <div className="text-[15px] font-extrabold tabular-nums">{num(x.avgAt[h])}</div>
-              <div className="text-[11px] text-text-faint">{t(`at.${h}`)}</div>
-            </div>
-          ))}
-        </div>
-        <Note>{t('growthNote')}</Note>
-      </Card>
+      {x.avgReachPct !== null && x.avgReachPct > 100 && <Note>{t('reachOver')}</Note>}
       {x.posts.length > 0 && (
         <Card className="gap-0 p-0">
           <div className="px-3.5 pt-3 pb-1">
@@ -258,14 +247,6 @@ function PostRow({
           })}
         </span>
       </div>
-      <div className="grid grid-cols-4 gap-1 text-center text-[11px]">
-        {CHECKPOINTS.map((h) => (
-          <div key={h} className="rounded-[8px] bg-surface-2 py-1">
-            <div className="text-[13px] font-bold tabular-nums">{num(p.viewsAt[h])}</div>
-            <div className="text-text-faint">{t(`at.${h}`)}</div>
-          </div>
-        ))}
-      </div>
       <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[12px] text-text-muted">
         <span>
           {t('views')}: <b className="text-text tabular-nums">{num(p.views)}</b>
@@ -341,7 +322,6 @@ export function EffectivenessSection({ r }: { r: Report }) {
   const max = Math.max(0, ...bt.cells.map((c) => c.avg ?? 0));
   const metricName = t(`metric.${e.metric}`);
   const s = e.schedule;
-  const kindLabel = (k: string) => (t.has(`kinds.${k}`) ? t(`kinds.${k}`) : k);
 
   return (
     <Section id="effect" title={t('title')} kind="estimate">
@@ -441,57 +421,6 @@ export function EffectivenessSection({ r }: { r: Report }) {
         <Note>
           {s.avgDelayMin !== null ? t('plan.delay', { min: num(s.avgDelayMin) }) : t('plan.noPlan')}
         </Note>
-      </Card>
-
-      <Card>
-        <CardTitle>{t('freq.title')}</CardTitle>
-        <p className="text-[13px] text-text-muted">
-          {t('freq.perWeek', { n: num(e.frequency.postsPerWeek), days: e.frequency.activeDays })}
-        </p>
-        <Bars
-          rows={e.frequency.buckets
-            .filter((b) => b.days > 0)
-            .map((b) => ({
-              label: t('freq.bucket', { n: b.perDay }),
-              value: b.avgPerPost,
-              hint: t('freq.days', { n: b.days }),
-              muted: b.days < 3,
-            }))}
-        />
-        <Note>
-          {e.frequency.recommendation
-            ? t('freq.best', { n: e.frequency.recommendation, metric: metricName })
-            : t('freq.insufficient')}
-        </Note>
-      </Card>
-
-      <Card>
-        <CardTitle>{t('types')}</CardTitle>
-        {e.types.length ? (
-          <Bars
-            rows={e.types.map((g) => ({
-              label: kindLabel(g.key),
-              value: e.metric === 'views' ? g.avgViews : g.avgReactions,
-              hint: t('posts', { n: g.posts }),
-              muted: !g.enough,
-            }))}
-          />
-        ) : (
-          <Note>{t('noPosts')}</Note>
-        )}
-        <CardTitle>{t('rubrics')}</CardTitle>
-        {e.rubrics.length ? (
-          <Bars
-            rows={e.rubrics.map((g) => ({
-              label: `#${g.key}`,
-              value: e.metric === 'views' ? g.avgViews : g.avgReactions,
-              hint: t('posts', { n: g.posts }),
-              muted: !g.enough,
-            }))}
-          />
-        ) : (
-          <Note>{t('noRubrics')}</Note>
-        )}
       </Card>
     </Section>
   );
