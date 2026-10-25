@@ -31,6 +31,8 @@ FROM node:${NODE_VERSION}-alpine AS server
 ENV NODE_ENV=production
 WORKDIR /app
 COPY --from=build --chown=node:node /out/server ./
+# Каталог медиафайлов: именованный том наследует владельца при первом подключении.
+RUN mkdir -p /var/lib/author-studio/media && chown -R node:node /var/lib/author-studio
 USER node
 EXPOSE 3000
 CMD ["node", "dist/main.api.js"]

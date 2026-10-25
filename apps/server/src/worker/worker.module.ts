@@ -2,7 +2,10 @@ import { Module } from '@nestjs/common';
 import { LoggerModule } from 'nestjs-pino';
 import { AuditModule } from '../audit/audit.module.js';
 import { BotWorkerModule } from '../bot/bot-worker.module.js';
+import { MediaModule } from '../media/media.module.js';
 import { NotificationsModule } from '../notifications/notifications.module.js';
+import { PublishingWorkerModule } from '../publishing/publishing-worker.module.js';
+import { SettingsModule } from '../settings/settings.module.js';
 import { TelegramModule } from '../telegram/telegram.module.js';
 import { ConfigModule, loadConfig } from '../config/config.module.js';
 import { DatabaseModule } from '../database/database.module.js';
@@ -21,8 +24,11 @@ import { SystemProcessor } from './system.processor.js';
     QueueModule,
     AuditModule,
     TelegramModule,
+    SettingsModule,
     NotificationsModule,
+    MediaModule,
     BotWorkerModule,
+    PublishingWorkerModule,
   ],
   providers: [HeartbeatService, SystemProcessor],
 })

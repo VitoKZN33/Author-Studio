@@ -25,6 +25,7 @@
     "helmet": "^8.3.0",
     "https-proxy-agent": "^9.1.0",
     "ioredis": "^6.0.0",
+    "multer": "^2.5.0",
     "nestjs-pino": "^5.3.1",
     "pg": "^8.23.1",
     "pino": "^10.4.0",
@@ -37,6 +38,7 @@
   "devDependencies": {
     "@swc/core": "^1.16.20",
     "@types/express": "^5.0.6",
+    "@types/multer": "^2.3.0",
     "@types/pg": "^8.23.1",
     "drizzle-kit": "^0.31.11",
     "unplugin-swc": "^2.0.0"

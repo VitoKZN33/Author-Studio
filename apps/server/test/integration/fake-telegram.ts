@@ -21,6 +21,9 @@ export class FakeTelegramError {
   ) {}
 }
 
+/** Обработчик бросает это, чтобы оборвать соединение без ответа (как сбой сети). */
+export class FakeTelegramDrop {}
+
 export class FakeTelegram {
   calls: FakeCall[] = [];
   private handlers = new Map<string, Handler>();
@@ -47,8 +50,13 @@ export class FakeTelegram {
       req.on('data', (c: Buffer) => chunks.push(c));
       req.on('end', () => {
         const method = (req.url ?? '').split('/').pop() ?? '';
-        const body = Buffer.concat(chunks).toString();
-        const params = body ? (JSON.parse(body) as Record<string, unknown>) : {};
+        const buf = Buffer.concat(chunks);
+        const multipart = (req.headers['content-type'] ?? '').startsWith('multipart/');
+        const params: Record<string, unknown> = multipart
+          ? { multipart: true, bytes: buf.length, raw: buf.toString('utf8', 0, 4000) }
+          : buf.length
+            ? (JSON.parse(buf.toString('utf8')) as Record<string, unknown>)
+            : {};
         this.calls.push({ method, params });
         res.setHeader('content-type', 'application/json');
         try {
@@ -56,6 +64,10 @@ export class FakeTelegram {
           const result = handler ? handler(params) : true;
           res.end(JSON.stringify({ ok: true, result }));
         } catch (e) {
+          if (e instanceof FakeTelegramDrop) {
+            req.socket.destroy();
+            return;
+          }
           if (e instanceof FakeTelegramError) {
             res.statusCode = e.code;
             res.end(
@@ -77,7 +89,18 @@ export class FakeTelegram {
   }
 
   async stop(): Promise<void> {
+    this.server?.closeAllConnections();
     await new Promise<void>((r) => this.server?.close(() => r()));
+  }
+
+  /** Временно перестать принимать соединения (имитация недоступности — ECONNREFUSED). */
+  async pause(): Promise<void> {
+    await this.stop();
+  }
+
+  async resume(): Promise<void> {
+    const port = Number(new URL(this.url).port);
+    await new Promise<void>((r) => this.server!.listen(port, '127.0.0.1', r));
   }
 }
 

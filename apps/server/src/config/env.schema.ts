@@ -41,6 +41,8 @@ export const envSchema = z
     DATABASE_URL: z
       .string({ error: 'не задан' })
       .regex(/^postgres(ql)?:\/\//, { error: 'ожидается адрес вида postgresql://…' }),
+    /** Каталог медиафайлов (том Docker, общий для api и worker). */
+    MEDIA_DIR: z.string().min(1).default('/var/lib/author-studio/media'),
     DATABASE_POOL_MAX: z.coerce.number().int().min(1).max(100).default(10),
     REDIS_URL: z
       .string({ error: 'не задан' })

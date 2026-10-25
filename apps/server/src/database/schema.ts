@@ -1,9 +1,11 @@
 import { sql } from 'drizzle-orm';
+import type { PostContent } from '@author-studio/shared';
 import {
   bigint,
   bigserial,
   check,
   index,
+  integer,
   jsonb,
   pgEnum,
   pgTable,
@@ -24,6 +26,21 @@ const timestamps = {
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 };
 
+export interface NotificationPrefs {
+  /** Успешные публикации. */
+  publishSuccess: boolean;
+  /** Ошибки и неизвестный результат публикации. */
+  publishProblems: boolean;
+  /** Состояние каналов и прав бота. */
+  integration: boolean;
+}
+
+export const DEFAULT_NOTIFICATION_PREFS: NotificationPrefs = {
+  publishSuccess: true,
+  publishProblems: true,
+  integration: true,
+};
+
 /** Единственная строка с настройками установки (id всегда 1). */
 export const installationSettings = pgTable(
   'installation_settings',
@@ -32,6 +49,11 @@ export const installationSettings = pgTable(
     productName: text('product_name').notNull().default('Author Studio'),
     timezone: text('timezone').notNull().default('Europe/Moscow'),
     locale: text('locale').notNull().default('ru'),
+    /** Включённые категории уведомлений владельцу (см. NotificationPrefs). */
+    notificationPrefs: jsonb('notification_prefs')
+      .$type<Partial<NotificationPrefs>>()
+      .notNull()
+      .default({}),
     ...timestamps,
   },
   (t) => [check('installation_settings_singleton', sql`${t.id} = 1`)],
@@ -132,4 +154,115 @@ export const channels = pgTable(
     uniqueIndex('channels_tg_chat_id_idx').on(t.tgChatId),
     index('channels_owner_status_idx').on(t.ownerId, t.status),
   ],
+);
+
+/** Загруженные медиафайлы. Файл лежит в MEDIA_DIR, путь хранится относительно него. */
+export const mediaKind = pgEnum('media_kind', ['photo', 'video']);
+
+export const mediaAssets = pgTable(
+  'media_assets',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    ownerId: uuid('owner_id').references(() => users.id, { onDelete: 'set null' }),
+    kind: mediaKind('kind').notNull(),
+    mime: text('mime').notNull(),
+    size: integer('size').notNull(),
+    sha256: text('sha256').notNull(),
+    /** Имя файла внутри MEDIA_DIR (случайное, без пользовательского ввода). */
+    storageKey: text('storage_key').notNull(),
+    originalName: text('original_name'),
+    /** file_id Telegram после первой загрузки: повторная отправка без повторной выгрузки. */
+    telegramFileId: text('telegram_file_id'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('media_assets_owner_idx').on(t.ownerId)],
+);
+
+/** Публикация-черновик: содержимое + номер версии для защиты от затирания правок. */
+export const posts = pgTable(
+  'posts',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    ownerId: uuid('owner_id').references(() => users.id, { onDelete: 'set null' }),
+    content: jsonb('content').$type<PostContent>().notNull(),
+    version: integer('version').notNull().default(1),
+    ...timestamps,
+    deletedAt: timestamp('deleted_at', { withTimezone: true }),
+  },
+  (t) => [index('posts_owner_updated_idx').on(t.ownerId, t.updatedAt)],
+);
+
+/**
+ * scheduled — ждёт времени отправки (в том числе «сейчас»);
+ * sending   — отправка начата, результат ещё не записан;
+ * published — Telegram подтвердил отправку;
+ * failed    — Telegram отклонил или исчерпаны безопасные повторы;
+ * ambiguous — связь прервалась после отправки запроса: неизвестно, опубликовано ли;
+ * cancelled — отменено владельцем.
+ */
+export const publicationStatus = pgEnum('publication_status', [
+  'scheduled',
+  'sending',
+  'published',
+  'failed',
+  'ambiguous',
+  'cancelled',
+]);
+
+/** Отправка публикации в конкретный канал. Многоканальная публикация = несколько строк. */
+export const publications = pgTable(
+  'publications',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    ownerId: uuid('owner_id').references(() => users.id, { onDelete: 'set null' }),
+    postId: uuid('post_id')
+      .notNull()
+      .references(() => posts.id, { onDelete: 'cascade' }),
+    channelId: uuid('channel_id')
+      .notNull()
+      .references(() => channels.id, { onDelete: 'cascade' }),
+    status: publicationStatus('status').notNull(),
+    scheduledAt: timestamp('scheduled_at', { withTimezone: true }).notNull(),
+    /** Содержимое на момент отправки — история не меняется при правке черновика. */
+    sentContent: jsonb('sent_content').$type<PostContent>(),
+    messageIds: jsonb('message_ids').$type<number[]>(),
+    publishedAt: timestamp('published_at', { withTimezone: true }),
+    attempts: integer('attempts').notNull().default(0),
+    lastError: text('last_error'),
+    ...timestamps,
+  },
+  (t) => [
+    index('publications_owner_scheduled_idx').on(t.ownerId, t.scheduledAt),
+    index('publications_status_scheduled_idx').on(t.status, t.scheduledAt),
+    index('publications_post_idx').on(t.postId),
+    // Не больше одной активной отправки поста в канал.
+    uniqueIndex('publications_active_unique_idx')
+      .on(t.postId, t.channelId)
+      .where(sql`status in ('scheduled', 'sending', 'ambiguous')`),
+  ],
+);
+
+export const attemptResult = pgEnum('publication_attempt_result', [
+  'ok',
+  'rate_limited',
+  'retryable',
+  'permanent',
+  'ambiguous',
+]);
+
+/** Журнал попыток отправки — для разбора ошибок. */
+export const publicationAttempts = pgTable(
+  'publication_attempts',
+  {
+    id: bigserial('id', { mode: 'bigint' }).primaryKey(),
+    publicationId: uuid('publication_id')
+      .notNull()
+      .references(() => publications.id, { onDelete: 'cascade' }),
+    startedAt: timestamp('started_at', { withTimezone: true }).notNull().defaultNow(),
+    finishedAt: timestamp('finished_at', { withTimezone: true }),
+    result: attemptResult('result'),
+    errorCode: integer('error_code'),
+    description: text('description'),
+  },
+  (t) => [index('publication_attempts_publication_idx').on(t.publicationId)],
 );

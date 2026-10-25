@@ -35,6 +35,7 @@ export function applyAppEnv(overrides: Record<string, string> = {}) {
     REDIS_URL: redis,
     APP_ENCRYPTION_KEY: Buffer.alloc(32, 1).toString('base64'),
     LOG_LEVEL: 'fatal',
+    MEDIA_DIR: `${process.env.TMPDIR ?? '/tmp'}/author-studio-test-media-${process.pid}`,
     ...overrides,
   });
 }

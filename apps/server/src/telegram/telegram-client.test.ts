@@ -32,6 +32,28 @@ describe('classifyTelegramError', () => {
     expect(classifyTelegramError(grammyError(401, 'Unauthorized'), 'x').kind).toBe('unauthorized');
   });
 
+  it('отказ в соединении → запрос точно не обработан; обрыв/тайм-аут → мог быть обработан', () => {
+    const refused = Object.assign(new Error('connect ECONNREFUSED'), { code: 'ECONNREFUSED' });
+    expect(
+      classifyTelegramError(new HttpError('x', refused), 'sendMessage').requestMayHaveBeenProcessed,
+    ).toBe(false);
+    const reset = Object.assign(new Error('socket hang up'), { code: 'ECONNRESET' });
+    expect(
+      classifyTelegramError(new HttpError('x', reset), 'sendMessage').requestMayHaveBeenProcessed,
+    ).toBe(true);
+    const timeout = new Error('The operation was aborted');
+    expect(
+      classifyTelegramError(new HttpError('x', timeout), 'sendMessage').requestMayHaveBeenProcessed,
+    ).toBe(true);
+    expect(
+      classifyTelegramError(grammyError(429, 'Too Many Requests', 3), 'x')
+        .requestMayHaveBeenProcessed,
+    ).toBe(false);
+    expect(
+      classifyTelegramError(grammyError(502, 'Bad Gateway'), 'x').requestMayHaveBeenProcessed,
+    ).toBe(true);
+  });
+
   it('сетевая ошибка → transient', () => {
     const e = classifyTelegramError(
       new HttpError('Network request failed', new Error('ECONNRESET')),

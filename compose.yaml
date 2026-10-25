@@ -20,6 +20,9 @@ x-server: &server
     DATABASE_URL: postgresql://${POSTGRES_USER:-author_studio}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD не задан в .env}@postgres:5432/${POSTGRES_DB:-author_studio}
     REDIS_URL: redis://redis:6379
     PUBLIC_URL: https://${PUBLIC_DOMAIN:?PUBLIC_DOMAIN не задан в .env}
+    MEDIA_DIR: /var/lib/author-studio/media
+  volumes:
+    - media:/var/lib/author-studio/media
   networks: [backend, egress]
   logging: *logging
 
@@ -129,6 +132,7 @@ networks:
   egress: {}
 
 volumes:
+  media:
   pgdata:
   redisdata:
   caddy_data:

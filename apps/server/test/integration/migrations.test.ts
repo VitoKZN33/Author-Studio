@@ -15,6 +15,10 @@ describe('миграции БД', () => {
       'audit_log',
       'channels',
       'installation_settings',
+      'media_assets',
+      'posts',
+      'publication_attempts',
+      'publications',
       'sessions',
       'users',
     ]);

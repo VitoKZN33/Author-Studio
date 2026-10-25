@@ -17,6 +17,11 @@ export class TelegramApiError extends Error {
     public readonly description: string,
     public readonly code?: number,
     public readonly retryAfter?: number,
+    /**
+     * Мог ли запрос дойти до Telegram. false — соединение не установлено (повтор безопасен);
+     * true — запрос мог быть обработан, даже если ответ не получен (повтор может создать дубль).
+     */
+    public readonly requestMayHaveBeenProcessed: boolean = true,
   ) {
     super(`Telegram ${method}: ${kind}${code ? ` ${code}` : ''} — ${description}`);
     this.name = 'TelegramApiError';
@@ -26,6 +31,33 @@ export class TelegramApiError extends Error {
   matches(fragment: string): boolean {
     return this.description.toLowerCase().includes(fragment);
   }
+}
+
+/** Ошибки, при которых соединение не было установлено — запрос точно не обработан. */
+const NOT_SENT_CODES = new Set([
+  'ECONNREFUSED',
+  'ENOTFOUND',
+  'EAI_AGAIN',
+  'EHOSTUNREACH',
+  'ENETUNREACH',
+]);
+
+function causeCode(err: unknown): string | undefined {
+  let cur: unknown = err;
+  for (let i = 0; i < 4 && cur && typeof cur === 'object'; i++) {
+    const c = cur as { code?: unknown; error?: unknown; cause?: unknown; message?: unknown };
+    if (typeof c.code === 'string') return c.code;
+    // SOCKS-прокси не смог соединиться с целевым адресом.
+    if (
+      typeof c.message === 'string' &&
+      /socks/i.test(c.message) &&
+      /connect|reject|refused/i.test(c.message)
+    ) {
+      return 'ECONNREFUSED';
+    }
+    cur = c.error ?? c.cause;
+  }
+  return undefined;
 }
 
 export function classifyTelegramError(err: unknown, method: string): TelegramApiError {
@@ -39,16 +71,27 @@ export function classifyTelegramError(err: unknown, method: string): TelegramApi
         err.description,
         code,
         err.parameters.retry_after ?? 5,
+        // 429: Telegram явно отказал в обработке — сообщение не отправлено.
+        false,
       );
     }
     if (code === 401) {
-      return new TelegramApiError('unauthorized', method, err.description, code);
+      return new TelegramApiError('unauthorized', method, err.description, code, undefined, false);
     }
     if (code >= 500) return new TelegramApiError('transient', method, err.description, code);
-    return new TelegramApiError('permanent', method, err.description, code);
+    return new TelegramApiError('permanent', method, err.description, code, undefined, false);
   }
   if (err instanceof HttpError) {
-    return new TelegramApiError('transient', method, 'сеть недоступна или тайм-аут');
+    const code = causeCode(err);
+    const notSent = code !== undefined && NOT_SENT_CODES.has(code);
+    return new TelegramApiError(
+      'transient',
+      method,
+      notSent ? 'сеть недоступна' : 'сеть недоступна или тайм-аут',
+      undefined,
+      undefined,
+      !notSent,
+    );
   }
   return new TelegramApiError(
     'transient',

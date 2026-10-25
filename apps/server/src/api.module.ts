@@ -8,6 +8,11 @@ import { AuthModule } from './auth/auth.module.js';
 import { BotApiModule } from './bot/bot-api.module.js';
 import { ChannelsApiModule } from './channels/channels-api.module.js';
 import { NotificationsModule } from './notifications/notifications.module.js';
+import { MediaApiModule } from './media/media-api.module.js';
+import { MediaModule } from './media/media.module.js';
+import { PublishingApiModule } from './publishing/publishing.module.js';
+import { SettingsApiModule } from './settings/settings-api.module.js';
+import { SettingsModule } from './settings/settings.module.js';
 import { SystemModule } from './system/system.module.js';
 import { TelegramModule } from './telegram/telegram.module.js';
 import { HttpExceptionFilter } from './common/http-exception.filter.js';
@@ -27,7 +32,9 @@ import { RedisModule } from './redis/redis.module.js';
     QueueModule,
     AuditModule,
     TelegramModule,
+    SettingsModule,
     NotificationsModule,
+    MediaModule,
     // Общий лимит запросов к API с одного адреса; для входа — строже (AuthController).
     ThrottlerModule.forRoot([{ name: 'default', ttl: 60_000, limit: 300 }]),
     AuthModule,
@@ -35,6 +42,9 @@ import { RedisModule } from './redis/redis.module.js';
     BotApiModule,
     ChannelsApiModule,
     SystemModule,
+    MediaApiModule,
+    PublishingApiModule,
+    SettingsApiModule,
   ],
   providers: [
     { provide: APP_FILTER, useClass: HttpExceptionFilter },

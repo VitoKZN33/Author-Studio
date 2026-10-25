@@ -8,6 +8,8 @@ export const QUEUE_NAMES = {
   telegramUpdates: 'telegram-updates',
   /** Исходящие уведомления владельцу через бота. */
   notifications: 'notifications',
+  /** Отправка публикаций в каналы и реконсилятор расписания. */
+  publications: 'publications',
 } as const;
 export type QueueName = (typeof QUEUE_NAMES)[keyof typeof QUEUE_NAMES];
 
