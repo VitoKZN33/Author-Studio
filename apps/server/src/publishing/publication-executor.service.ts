@@ -218,7 +218,13 @@ export class PublicationExecutor {
         .where(eq(publications.id, c.id));
       await this.finishAttempt(c.attemptId, 'ok');
       await this.analytics
-        .recordPublished(c.channel.id, c.id, messageIds, c.content)
+        .recordPublished(
+          c.channel.id,
+          c.id,
+          messageIds,
+          c.content,
+          mediaRows.map((m) => m.kind),
+        )
         .catch((err: Error) =>
           this.logger.warn({ err: err.message }, 'Сообщение не записано в аналитику'),
         );

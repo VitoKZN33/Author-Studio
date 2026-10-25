@@ -43,6 +43,13 @@
       "when": 1792931056441,
       "tag": "0005_mtproto_views",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1792940134128,
+      "tag": "0006_stats_links",
+      "breakpoints": true
     }
   ]
 }

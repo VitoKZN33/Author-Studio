@@ -7,6 +7,8 @@ import {
 } from '@nestjs/common';
 import { InputFile } from 'grammy';
 import { and, asc, desc, eq, gte, inArray, lte } from 'drizzle-orm';
+import { LinksService } from '../links/links.service.js';
+import { adsSummary, audienceChanges, buildPosts, effectiveness, reachSummary } from './report.js';
 import { AuditService } from '../audit/audit.service.js';
 import { TELEGRAM_CLIENT } from '../telegram/telegram.module.js';
 import type { TelegramClient } from '../telegram/telegram-client.js';
@@ -18,6 +20,7 @@ import {
   channelMetricSnapshots,
   channels,
   messageMetricSnapshots,
+  publications,
 } from '../database/schema.js';
 import {
   bestTime,
@@ -63,6 +66,7 @@ export class AnalyticsService {
     @Inject(DB) private readonly db: Database,
     private readonly audit: AuditService,
     @Inject(TELEGRAM_CLIENT) private readonly telegram: TelegramClient | null,
+    private readonly links: LinksService,
   ) {}
 
   private tz() {
@@ -378,5 +382,88 @@ export class AnalyticsService {
         },
       ),
     );
+  }
+
+  /**
+   * Сводный отчёт для экрана «Статистика»: аудитория, охваты, вовлечённость,
+   * эффективность, реклама, переходы. Считается на сервере из собранных данных.
+   */
+  async report(ownerId: string, channelId: string, days: number) {
+    const c = await this.channel(ownerId, channelId);
+    const now = new Date();
+    const from = new Date(now.getTime() - days * DAY);
+    const overview = await this.overview(ownerId, channelId, days);
+    const subs = await this.subscriberSnapshots(
+      c.id,
+      new Date(Math.min(from.getTime(), now.getTime() - 31 * DAY) - 8 * DAY),
+      now,
+    );
+    const messages = await this.db
+      .select()
+      .from(channelMessages)
+      .where(and(eq(channelMessages.channelId, c.id), gte(channelMessages.postedAt, from)))
+      .orderBy(asc(channelMessages.postedAt));
+    const metrics = messages.length
+      ? await this.db
+          .select({
+            messageId: messageMetricSnapshots.messageId,
+            metric: messageMetricSnapshots.metric,
+            value: messageMetricSnapshots.value,
+            measuredAt: messageMetricSnapshots.measuredAt,
+          })
+          .from(messageMetricSnapshots)
+          .where(
+            and(
+              eq(messageMetricSnapshots.channelId, c.id),
+              inArray(
+                messageMetricSnapshots.messageId,
+                messages.map((m) => m.messageId),
+              ),
+            ),
+          )
+      : [];
+    const plan = await this.db
+      .select({
+        status: publications.status,
+        scheduledAt: publications.scheduledAt,
+        publishedAt: publications.publishedAt,
+        createdAt: publications.createdAt,
+      })
+      .from(publications)
+      .where(and(eq(publications.channelId, c.id), gte(publications.scheduledAt, from)));
+
+    const posts = buildPosts(messages, metrics, subs, now);
+    const { reach, engagement } = reachSummary(posts);
+    const links = (await this.links.list(ownerId, from)).filter(
+      (l) => !l.channelId || l.channelId === c.id,
+    );
+    return {
+      channel: overview.channel,
+      timezone: this.tz(),
+      days,
+      coverage: overview.coverage,
+      audience: {
+        current: overview.current,
+        changes: audienceChanges(subs, now),
+        joins: overview.joinsTotal,
+        leaves: overview.leavesTotal,
+        net:
+          overview.joinsTotal !== null ? overview.joinsTotal - (overview.leavesTotal ?? 0) : null,
+        series: overview.series,
+        markers: overview.markers,
+      },
+      reach: { ...reach, posts: [...posts].reverse().slice(0, 50) },
+      engagement,
+      effectiveness: effectiveness(posts, plan, this.tz(), days),
+      ads: (() => {
+        const a = adsSummary(posts);
+        return { ...a, posts: [...a.posts].reverse().slice(0, 20) };
+      })(),
+      links: {
+        items: links,
+        clicks: links.reduce((s, l) => s + (l.period?.clicks ?? 0), 0),
+        unique: links.reduce((s, l) => s + (l.period?.unique ?? 0), 0),
+      },
+    };
   }
 }

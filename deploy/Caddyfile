@@ -21,6 +21,14 @@
 		}
 	}
 
+	# Короткие отслеживаемые ссылки: /r/<код> → API (переход и учёт клика).
+	handle /r/* {
+		rewrite * /api{uri}
+		reverse_proxy api:3000 {
+			header_up X-Request-Id {http.request.uuid}
+		}
+	}
+
 	# Статика Mini App. Telegram Web открывает Mini App во фрейме — X-Frame-Options
 	# не ставим, источник фрейма ограничивает CSP frame-ancestors.
 	# 'unsafe-inline' для script-src нужен для встроенных скриптов статической сборки Next.js.

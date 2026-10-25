@@ -20,6 +20,7 @@ describe('миграции БД', () => {
       'channel_metric_snapshots',
       'channels',
       'installation_settings',
+      'link_clicks',
       'media_assets',
       'message_metric_snapshots',
       'mtproto_account',
@@ -27,6 +28,7 @@ describe('миграции БД', () => {
       'publication_attempts',
       'publications',
       'sessions',
+      'tracked_links',
       'users',
     ]);
     const settings = await pool.query(

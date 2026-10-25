@@ -10,6 +10,7 @@ import {
   channels,
   messageMetricSnapshots,
 } from '../database/schema.js';
+import { contentMeta } from './content-meta.js';
 
 const MEMBER_STATUSES = new Set(['creator', 'administrator', 'member']);
 
@@ -54,8 +55,14 @@ export class AnalyticsIngestService {
     publicationId: string,
     messageIds: number[],
     content: PostContent,
+    mediaKinds: ('photo' | 'video')[] = [],
   ): Promise<void> {
     const summary = summarizeContent(content);
+    const meta = contentMeta(content.text, {
+      photos: mediaKinds.filter((k) => k === 'photo').length,
+      videos: mediaKinds.filter((k) => k === 'video').length,
+      other: Math.max(0, content.media.length - mediaKinds.length),
+    });
     const postedAt = new Date();
     await this.db
       .insert(channelMessages)
@@ -68,11 +75,12 @@ export class AnalyticsIngestService {
           summary,
           hasMedia: content.media.length > 0,
           source: 'app',
+          ...meta,
         })),
       )
       .onConflictDoUpdate({
         target: [channelMessages.channelId, channelMessages.messageId],
-        set: { publicationId },
+        set: { publicationId, ...meta },
       });
   }
 
@@ -89,6 +97,13 @@ export class AnalyticsIngestService {
         summary: summarizeMessage(m),
         hasMedia: !!(m.photo || m.video || m.document || m.animation),
         source: 'telegram',
+        // Тип по одному сообщению; альбом определяется в отчёте по media_group_id.
+        ...contentMeta(m.text ?? m.caption ?? '', {
+          photos: m.photo ? 1 : 0,
+          videos: m.video ? 1 : 0,
+          documents: m.document ? 1 : 0,
+          other: m.animation || m.audio || m.voice || m.poll ? 1 : 0,
+        }),
       })
       // Сообщение уже записано при публикации из приложения — дополняем группу альбома.
       .onConflictDoUpdate({

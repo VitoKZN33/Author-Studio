@@ -64,6 +64,18 @@ export class AnalyticsController {
     return this.analytics.overview(req.auth.userId, id, q.days);
   }
 
+  @Get('report')
+  @ApiOperation({
+    summary: 'Сводный отчёт: аудитория, охваты, вовлечённость, эффективность, реклама, переходы',
+  })
+  report(
+    @Req() req: AuthenticatedRequest,
+    @Param('channelId', ParseUUIDPipe) id: string,
+    @Query(new ZodValidationPipe(overviewQuery)) q: z.infer<typeof overviewQuery>,
+  ) {
+    return this.analytics.report(req.auth.userId, id, q.days);
+  }
+
   @Get('posts')
   @ApiOperation({ summary: 'Показатели постов за период' })
   async posts(

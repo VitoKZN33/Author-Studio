@@ -20,6 +20,9 @@ import { MTPROTO_MESSAGES, MtprotoStore } from './mtproto.store.js';
 
 /** Посты за последние 30 дней: позже просмотры почти не меняются. */
 const WINDOW_DAYS = 30;
+/** Свежие посты (до 48 ч) опрашиваются каждые 15 минут: для просмотров через 1, 6, 24 и 48 ч. */
+const FRESH_HOURS = 48;
+const FRESH_INTERVAL_MS = 15 * 60_000;
 const MAX_MESSAGES = 300;
 const BATCH = 100;
 
@@ -44,13 +47,13 @@ export class ViewsCollector implements OnApplicationBootstrap, OnApplicationShut
   ) {}
 
   async onApplicationBootstrap(): Promise<void> {
-    this.worker = createWorker(QUEUE_NAMES.views, () => this.syncAll(), this.connection);
+    this.worker = createWorker(
+      QUEUE_NAMES.views,
+      (job) => this.syncAll(!!(job.data as { force?: boolean } | undefined)?.force),
+      this.connection,
+    );
     await this.queue
-      .upsertJobScheduler(
-        'views-schedule',
-        { every: this.config.VIEWS_SYNC_INTERVAL_MINUTES * 60_000 },
-        { name: SYNC_ALL_JOB },
-      )
+      .upsertJobScheduler('views-schedule', { every: FRESH_INTERVAL_MS }, { name: SYNC_ALL_JOB })
       .catch((err: Error) =>
         this.logger.error({ err: err.message }, 'Не удалось запустить сбор просмотров'),
       );
@@ -60,11 +63,20 @@ export class ViewsCollector implements OnApplicationBootstrap, OnApplicationShut
     await this.worker?.close();
   }
 
-  /** Возвращает число записанных изменений; без подключённого аккаунта ничего не делает. */
-  async syncAll(): Promise<number> {
+  /**
+   * Свежие посты — при каждом запуске (снимок пишется всегда: это точки «через N часов»),
+   * остальные — раз в VIEWS_SYNC_INTERVAL_MINUTES и только при изменении значения.
+   * Возвращает число записанных снимков; без подключённого аккаунта ничего не делает.
+   */
+  async syncAll(force = false): Promise<number> {
     const s = await this.store.secrets();
     if (!s || s.row.status === 'error' || s.row.status === 'disconnected') return 0;
     if (s.row.floodUntil && s.row.floodUntil.getTime() > Date.now()) return 0;
+    const full =
+      force ||
+      !s.row.lastSyncAt ||
+      Date.now() - s.row.lastSyncAt.getTime() >=
+        this.config.VIEWS_SYNC_INTERVAL_MINUTES * 60_000 - 60_000;
 
     const list = await this.db
       .select({ id: channels.id, tgChatId: channels.tgChatId, username: channels.username })
@@ -74,7 +86,7 @@ export class ViewsCollector implements OnApplicationBootstrap, OnApplicationShut
     const problems: string[] = [];
     for (const c of list) {
       try {
-        written += await this.syncChannel(s, c);
+        written += await this.syncChannel(s, c, full);
       } catch (e) {
         const err = e instanceof MtprotoError ? e : new MtprotoError('unknown', String(e));
         if (err.code === 'flood_wait') {
@@ -108,9 +120,8 @@ export class ViewsCollector implements OnApplicationBootstrap, OnApplicationShut
     await this.store.update({
       status: 'active',
       floodUntil: null,
-      lastSyncAt: new Date(),
-      lastSyncCount: written,
       lastError: problems[0] ?? null,
+      ...(full ? { lastSyncAt: new Date(), lastSyncCount: written } : {}),
     });
     return written;
   }
@@ -118,15 +129,20 @@ export class ViewsCollector implements OnApplicationBootstrap, OnApplicationShut
   private async syncChannel(
     s: NonNullable<Awaited<ReturnType<MtprotoStore['secrets']>>>,
     c: { id: string; tgChatId: bigint; username: string | null },
+    full: boolean,
   ): Promise<number> {
     const since = new Date(Date.now() - WINDOW_DAYS * 86_400_000);
-    const msgs = await this.db
-      .select({ messageId: channelMessages.messageId })
+    const freshSince = Date.now() - FRESH_HOURS * 3600_000;
+    const all = await this.db
+      .select({ messageId: channelMessages.messageId, postedAt: channelMessages.postedAt })
       .from(channelMessages)
       .where(and(eq(channelMessages.channelId, c.id), gte(channelMessages.postedAt, since)))
       .orderBy(desc(channelMessages.postedAt))
       .limit(MAX_MESSAGES);
-    const ids = msgs.map((m) => m.messageId);
+    const fresh = new Set(
+      all.filter((m) => m.postedAt.getTime() >= freshSince).map((m) => m.messageId),
+    );
+    const ids = all.map((m) => m.messageId).filter((id) => full || fresh.has(id));
     if (ids.length === 0) return 0;
 
     // Последние известные значения — чтобы не плодить одинаковые снимки.
@@ -163,7 +179,8 @@ export class ViewsCollector implements OnApplicationBootstrap, OnApplicationShut
       for (const v of views) {
         for (const metric of ['views', 'forwards'] as const) {
           const value = v[metric];
-          if (value === null || latest.get(`${v.id}:${metric}`) === value) continue;
+          if (value === null) continue;
+          if (!fresh.has(v.id) && latest.get(`${v.id}:${metric}`) === value) continue;
           rows.push({ channelId: c.id, messageId: v.id, metric, value, source: 'mtproto' });
         }
       }

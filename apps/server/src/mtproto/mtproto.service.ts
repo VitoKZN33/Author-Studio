@@ -154,7 +154,7 @@ export class MtprotoService {
   async syncNow() {
     await this.queue.add(
       SYNC_ALL_JOB,
-      {},
+      { force: true },
       { jobId: `views-now-${Math.floor(Date.now() / 60_000)}` },
     );
   }

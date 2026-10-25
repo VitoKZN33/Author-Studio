@@ -10,7 +10,7 @@ const LINE = 'var(--chart-1)';
 const JOIN = 'var(--chart-1)';
 const LEAVE = 'var(--chart-2)';
 const GRID = 'var(--color-border)';
-const H = 200;
+const H = 150;
 const PAD = { top: 14, right: 12, bottom: 26, left: 46 };
 
 function niceDomain(values: number[]): [number, number] {

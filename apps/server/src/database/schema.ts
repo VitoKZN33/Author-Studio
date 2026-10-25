@@ -315,6 +315,15 @@ export const channelMessages = pgTable(
     summary: text('summary').notNull(),
     hasMedia: boolean('has_media').notNull().default(false),
     source: text('source').notNull(),
+    /** Тип контента для сравнения: text, photo, video, album, document, other (null — до этапа). */
+    contentKind: text('content_kind'),
+    /** Хэштеги поста (рубрики), в нижнем регистре, без #. */
+    hashtags: text('hashtags')
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
+    /** Рекламный пост: есть маркировка erid или пометка «Реклама» / #реклама. */
+    isAd: boolean('is_ad').notNull().default(false),
   },
   (t) => [
     uniqueIndex('channel_messages_unique_idx').on(t.channelId, t.messageId),
@@ -454,4 +463,40 @@ export const mtprotoAccount = pgTable(
     ...timestamps,
   },
   (t) => [check('mtproto_account_singleton', sql`${t.id} = 1`)],
+);
+
+// ---------------------------------------------------------------- Отслеживаемые ссылки
+
+/**
+ * Короткая ссылка вида https://домен/r/<slug>, ведущая на адрес, заданный владельцем.
+ * Клик — переход человека (запросы превью-ботов не считаются). IP не хранится:
+ * для подсчёта уникальных — хэш (IP + браузер + соль дня), который нельзя обратить.
+ */
+export const trackedLinks = pgTable(
+  'tracked_links',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    ownerId: uuid('owner_id').references(() => users.id, { onDelete: 'set null' }),
+    channelId: uuid('channel_id').references(() => channels.id, { onDelete: 'set null' }),
+    slug: text('slug').notNull(),
+    title: text('title').notNull(),
+    targetUrl: text('target_url').notNull(),
+    isAd: boolean('is_ad').notNull().default(false),
+    archivedAt: timestamp('archived_at', { withTimezone: true }),
+    ...timestamps,
+  },
+  (t) => [uniqueIndex('tracked_links_slug_idx').on(t.slug)],
+);
+
+export const linkClicks = pgTable(
+  'link_clicks',
+  {
+    id: bigserial('id', { mode: 'bigint' }).primaryKey(),
+    linkId: uuid('link_id')
+      .notNull()
+      .references(() => trackedLinks.id, { onDelete: 'cascade' }),
+    clickedAt: timestamp('clicked_at', { withTimezone: true }).notNull().defaultNow(),
+    visitorHash: text('visitor_hash').notNull(),
+  },
+  (t) => [index('link_clicks_link_idx').on(t.linkId, t.clickedAt)],
 );

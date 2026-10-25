@@ -124,8 +124,8 @@ beforeAll(async () => {
     )
   ).rows[0].id;
   for (const [id, ago] of [
-    [10, 1],
-    [11, 2],
+    [10, 3],
+    [11, 4],
     [12, 40],
   ] as const) {
     await db().query(
@@ -234,6 +234,20 @@ describe('подключение аккаунта', () => {
 });
 
 describe('сбор просмотров', () => {
+  it('свежие посты (до 48 ч) опрашиваются при каждом запуске и пишутся всегда', async () => {
+    await login();
+    await db().query(
+      "insert into channel_messages (channel_id, message_id, posted_at, summary, source) values ($1, 20, now() - interval '2 hours', 'свежий', 'app')",
+      [channelId],
+    );
+    views.set(20, { views: 15, forwards: 1 });
+    await collector().syncAll(true);
+    calls.length = 0;
+    expect(await collector().syncAll()).toBe(2); // тот же результат — снова две точки
+    expect(calls).toEqual(['fetch:-1001234567890:1:true']);
+    await db().query('delete from channel_messages where message_id = 20');
+  });
+
   it('без подключённого аккаунта ничего не делает', async () => {
     expect(await collector().syncAll()).toBe(0);
     expect(calls).toEqual([]);
@@ -242,7 +256,7 @@ describe('сбор просмотров', () => {
   it('записывает просмотры и пересылки постов за 30 дней; повтор без изменений — без новых строк', async () => {
     await login();
     calls.length = 0;
-    expect(await collector().syncAll()).toBe(4);
+    expect(await collector().syncAll(true)).toBe(4);
     expect(calls).toEqual(['fetch:-1001234567890:2:true']); // пост 40-дневной давности не запрашивается
     const { rows } = await db().query(
       'select message_id, metric, value, source from message_metric_snapshots order by message_id, metric',
@@ -253,9 +267,11 @@ describe('сбор просмотров', () => {
       { message_id: 11, metric: 'forwards', value: 0, source: 'mtproto' },
       { message_id: 11, metric: 'views', value: 80, source: 'mtproto' },
     ]);
-    expect(await collector().syncAll()).toBe(0);
+    expect(await collector().syncAll(true)).toBe(0);
     views.set(10, { views: 150, forwards: 3 });
-    expect(await collector().syncAll()).toBe(1);
+    // Не полный запуск: старые посты не опрашиваются.
+    expect(await collector().syncAll()).toBe(0);
+    expect(await collector().syncAll(true)).toBe(1);
     const st = await svc().view();
     expect(st).toMatchObject({ status: 'active', lastSyncCount: 1 });
     expect(st.lastSyncAt).not.toBeNull();
