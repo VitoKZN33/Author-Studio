@@ -1,0 +1,19 @@
+packages:
+  - apps/*
+  - packages/*
+
+# Сборочные скрипты зависимостей разрешаются явно.
+# @scarf/scarf — телеметрия загрузок (через swagger-ui-dist): запрещено.
+# msgpackr-extract — необязательное нативное ускорение BullMQ: не требуется.
+allowBuilds:
+  '@scarf/scarf': false
+  msgpackr-extract: false
+  '@swc/core': true
+  esbuild: true
+  # Нативный watcher dev-сервера: используются готовые бинарники из optionalDependencies.
+  '@parcel/watcher': false
+
+# Принудительные версии транзитивных зависимостей (исправления уязвимостей).
+overrides:
+  # GHSA-q7qp-rjg7-q26m: @nestjs/platform-express 12.2.0 фиксирует multer 2.4.0.
+  multer: ^2.5.0

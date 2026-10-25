@@ -40,6 +40,7 @@
 ```
 
 Принципы:
+
 - **Модульный монолит**: один кодовый backend, два процесса — `api` (HTTP) и `worker`
   (очереди, планировщик, сбор метрик, исходящие уведомления).
 - **PostgreSQL — источник истины** для заданий. Redis/BullMQ — механизм доставки.
@@ -59,9 +60,8 @@ author-studio/
 │   │   ├── src/shared/      UI-kit, api-клиент, telegram-обвязка, i18n
 │   │   └── messages/ru.json словари
 │   └── server/              NestJS — один код, две точки входа
-│       ├── src/main.api.ts
-│       ├── src/main.worker.ts
-│       ├── src/modules/
+│       ├── src/main.api.ts, src/main.worker.ts
+│       ├── src/<модуль>/      (модули — прямо в src/, без каталога modules/)
 │       │   ├── config/        валидация env, настройки установки
 │       │   ├── auth/          initData, сессии, guard владельца
 │       │   ├── telegram/      клиент Bot API, webhook, rate limiter
@@ -80,13 +80,13 @@ author-studio/
 │       │   ├── notifications/ outbox, группировка, настройки категорий
 │       │   ├── audit/         журнал событий
 │       │   └── health/        liveness/readiness
-│       └── prisma/            schema.prisma, migrations/
+│       └── drizzle/           SQL-миграции (генерируются из src/database/schema.ts)
 ├── packages/
 │   └── shared/              общие типы, zod-схемы, лимиты Telegram, i18n-ключи
-├── deploy/
-│   ├── compose.yaml
-│   ├── Caddyfile
-│   └── .env.example
+├── compose.yaml             Docker Compose (в корне — для `docker compose up`)
+├── Dockerfile               образы server (api/worker/migrate) и web (Caddy + статика)
+├── .env.example
+├── deploy/Caddyfile
 ├── scripts/                 install.sh, update.sh, backup.sh, restore.sh, status.sh
 └── docs/
 ```
@@ -94,38 +94,39 @@ author-studio/
 ## 3. Основные сущности БД
 
 Все даты — `timestamptz` (UTC). Часовой пояс установки — IANA-строка в настройках.
-Публичные идентификаторы — случайные токены; внутренние `id` — UUIDv7.
+Публичные идентификаторы — случайные токены; внутренние `id` — UUID (`gen_random_uuid()`).
 
-| Сущность | Назначение и ключевые поля |
-|---|---|
-| `InstallationSettings` | singleton: название продукта, часовой пояс, локаль, флаги модулей |
-| `User` | `telegramId`, `role` (OWNER; задел под EDITOR/VIEWER) |
-| `Session` | хэш токена, `userId`, `expiresAt`, `revokedAt`, `lastSeenAt` |
-| `Channel` | `tgChatId`, title, username, `status` (ACTIVE / RIGHTS_MISSING / BOT_REMOVED / DISCONNECTED), снимок прав, `rightsCheckedAt` |
-| `Post` | черновик: документ редактора (JSON), `version` (оптимистическая блокировка), тип (обычный/рекламный) |
-| `PostMedia` | порядок, ссылка на `MediaAsset`, подпись |
-| `MediaAsset` | путь, sha256, mime, размер, размеры, кэш `telegramFileId` |
-| `PostButton` | ряд/позиция, текст, URL |
-| `Publication` | Post × Channel: `scheduledAt`, `status`, `messageIds[]`, `publishedAt`, `idempotencyKey` |
-| `PublicationAttempt` | номер, начало/конец, результат (OK / TRANSIENT / PERMANENT / **AMBIGUOUS**), код ошибки, `retryAfter` |
-| `ChannelMetricSnapshot` | канал, метрика, значение, `measuredAt`, `source`, `methodVersion` |
-| `MessageMetricSnapshot` | сообщение, метрика (reactions…), значение, `measuredAt`, `source` |
-| `MemberEvent` | вступления/выходы из `chat_member` (если Telegram их доставляет), `inviteLinkId` |
-| `InviteLink` | ссылка-приглашение с именем (для атрибуции подписок) |
-| `Advertiser` | имя, контакты, реквизиты (для ОРД), заметки |
-| `AdOrder` | канал, рекламодатель, цена, валюта, `paymentStatus`, `lifecycleStatus`, даты, закреп/удаление, ERID |
-| `AdOrderEvent` | история статусов и действий |
-| `AdPlacement` | связь заказа с `Publication`, `pinUntil`, `deleteAt`, фактические времена |
-| `TrackingLink` | случайный slug, целевой URL (валидирован), заказ |
-| `ClickEvent` | время, суточно-солёный хэш IP, класс UA, `isSuspect` — без сырых IP |
-| `PublicReport` | хэш токена, заказ, набор видимых полей, `revokedAt`, `expiresAt` |
-| `OrdRecord` | ERID, номер договора, статусы ручного/автоматического процесса |
-| `AiProviderConfig` | тип, baseUrl, модель, **зашифрованный** ключ, лимиты |
-| `AiUsage` | сценарий, токены, оценка стоимости, время |
-| `NotificationPreference` / `NotificationOutbox` | категории, очередь исходящих сообщений бота |
-| `AuditLog` | актор, действие, сущность, метаданные (без секретов) |
+| Сущность                                        | Назначение и ключевые поля                                                                                                   |
+| ----------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `InstallationSettings`                          | singleton: название продукта, часовой пояс, локаль, флаги модулей                                                            |
+| `User`                                          | `telegramId`, `role` (OWNER; задел под EDITOR/VIEWER)                                                                        |
+| `Session`                                       | хэш токена, `userId`, `expiresAt`, `revokedAt`, `lastSeenAt`                                                                 |
+| `Channel`                                       | `tgChatId`, title, username, `status` (ACTIVE / RIGHTS_MISSING / BOT_REMOVED / DISCONNECTED), снимок прав, `rightsCheckedAt` |
+| `Post`                                          | черновик: документ редактора (JSON), `version` (оптимистическая блокировка), тип (обычный/рекламный)                         |
+| `PostMedia`                                     | порядок, ссылка на `MediaAsset`, подпись                                                                                     |
+| `MediaAsset`                                    | путь, sha256, mime, размер, размеры, кэш `telegramFileId`                                                                    |
+| `PostButton`                                    | ряд/позиция, текст, URL                                                                                                      |
+| `Publication`                                   | Post × Channel: `scheduledAt`, `status`, `messageIds[]`, `publishedAt`, `idempotencyKey`                                     |
+| `PublicationAttempt`                            | номер, начало/конец, результат (OK / TRANSIENT / PERMANENT / **AMBIGUOUS**), код ошибки, `retryAfter`                        |
+| `ChannelMetricSnapshot`                         | канал, метрика, значение, `measuredAt`, `source`, `methodVersion`                                                            |
+| `MessageMetricSnapshot`                         | сообщение, метрика (reactions…), значение, `measuredAt`, `source`                                                            |
+| `MemberEvent`                                   | вступления/выходы из `chat_member` (если Telegram их доставляет), `inviteLinkId`                                             |
+| `InviteLink`                                    | ссылка-приглашение с именем (для атрибуции подписок)                                                                         |
+| `Advertiser`                                    | имя, контакты, реквизиты (для ОРД), заметки                                                                                  |
+| `AdOrder`                                       | канал, рекламодатель, цена, валюта, `paymentStatus`, `lifecycleStatus`, даты, закреп/удаление, ERID                          |
+| `AdOrderEvent`                                  | история статусов и действий                                                                                                  |
+| `AdPlacement`                                   | связь заказа с `Publication`, `pinUntil`, `deleteAt`, фактические времена                                                    |
+| `TrackingLink`                                  | случайный slug, целевой URL (валидирован), заказ                                                                             |
+| `ClickEvent`                                    | время, суточно-солёный хэш IP, класс UA, `isSuspect` — без сырых IP                                                          |
+| `PublicReport`                                  | хэш токена, заказ, набор видимых полей, `revokedAt`, `expiresAt`                                                             |
+| `OrdRecord`                                     | ERID, номер договора, статусы ручного/автоматического процесса                                                               |
+| `AiProviderConfig`                              | тип, baseUrl, модель, **зашифрованный** ключ, лимиты                                                                         |
+| `AiUsage`                                       | сценарий, токены, оценка стоимости, время                                                                                    |
+| `NotificationPreference` / `NotificationOutbox` | категории, очередь исходящих сообщений бота                                                                                  |
+| `AuditLog`                                      | актор, действие, сущность, метаданные (без секретов)                                                                         |
 
 Ключевые инварианты (ограничения БД):
+
 - `Publication (postId, channelId, scheduledAt)` уникальна в активных статусах.
 - `idempotencyKey` уникален; повтор задания с тем же ключом не создаёт нового отправления.
 - Все бизнес-таблицы ссылаются на `ownerId` → проверка принадлежности в сервисном
@@ -140,6 +141,7 @@ Cookies не используются (WebView Telegram Web/Desktop ведут �
 cookies в iframe), поэтому CSRF к API неприменим.
 
 **Отложенная публикация:**
+
 1. API сохраняет `Publication(status=SCHEDULED)` в транзакции и ставит delayed-job
    `publish:{publicationId}` с `jobId = publicationId` (дубликаты отбрасываются BullMQ).
 2. Worker при старте задания берёт строку `SELECT … FOR UPDATE SKIP LOCKED` и переводит
@@ -162,14 +164,15 @@ cookies в iframe), поэтому CSRF к API неприменим.
 ## 5. Развёртывание (Docker Compose)
 
 Долгоживущие сервисы: `caddy`, `api`, `worker`, `postgres`, `redis`.
-Одноразовый: `migrate` (prisma migrate deploy) — запускается скриптом обновления.
+Одноразовый: `migrate` (миграции Drizzle) — запускается при каждом `docker compose up`;
+`api` и `worker` стартуют только после его успешного завершения.
 Отдельного контейнера frontend нет: Next.js собирается в статику (`output: 'export'`),
 которую раздаёт Caddy. Обоснование — в DECISIONS.md (ADR-003).
 
 - PostgreSQL и Redis без опубликованных портов, только внутренняя сеть.
 - `restart: unless-stopped` + docker в systemd → автозапуск после перезагрузки.
 - healthchecks: `pg_isready`, `redis-cli ping`, `GET /api/health/ready` (БД + Redis),
-  worker — heartbeat в Redis, проверяемый readiness API.
+  worker — heartbeat в Redis (`dist/worker/healthcheck.js`); сводка — `/api/health/status`.
 - Резервные копии: `scripts/backup.sh` через cron хоста (`pg_dump -Fc` + медиа),
   ротация поколений, права 600. Подробно — этап 2/8, `docs/BACKUP_RESTORE.md`.
 
@@ -179,6 +182,6 @@ cookies в iframe), поэтому CSRF к API неприменим.
 cd /opt/author-studio && ./scripts/update.sh
 ```
 
-`update.sh` = резервная копия → `git pull` → сборка → `migrate` → `up -d` → проверка
+`update.sh` = резервная копия → `git pull` → сборка → `up -d` (с `migrate`) → проверка
 здоровья. Вариант `git pull && docker compose up -d --build` тоже будет работать, но
 без резервной копии перед миграцией — поэтому рекомендую скрипт.

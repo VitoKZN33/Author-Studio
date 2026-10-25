@@ -1,0 +1,31 @@
+{
+  "name": "author-studio",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@12.15.0",
+  "engines": {
+    "node": ">=24.11.0 <25"
+  },
+  "scripts": {
+    "build": "pnpm -r --workspace-concurrency=1 run build",
+    "typecheck": "pnpm -r run typecheck",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "pnpm -r run test",
+    "test:integration": "pnpm --filter @author-studio/server run test:integration",
+    "check:migrations": "node scripts/check-migrations.mjs apps/server/drizzle",
+    "check": "pnpm format:check && pnpm lint && pnpm build && pnpm typecheck && pnpm test && pnpm check:migrations"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^24.19.2",
+    "eslint": "^10.13.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^17.13.0",
+    "prettier": "^3.9.10",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.72.0",
+    "vitest": "^5.0.5"
+  }
+}

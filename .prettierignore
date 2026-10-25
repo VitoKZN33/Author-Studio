@@ -1,0 +1,8 @@
+pnpm-lock.yaml
+dist
+.next
+out
+coverage
+apps/server/src/generated
+apps/server/drizzle
+apps/web/next-env.d.ts
