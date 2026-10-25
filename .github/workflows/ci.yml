@@ -32,10 +32,12 @@ jobs:
       TEST_REDIS_URL: redis://localhost:6379
     steps:
       - uses: actions/checkout@v5
+      # pnpm ставится первым: setup-node видит packageManager и включает кэш pnpm.
+      - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v5
         with:
           node-version-file: .nvmrc
-      - run: npm install -g pnpm@12.15.0
+          cache: pnpm
       - run: pnpm install --frozen-lockfile
       - name: Форматирование, линтер, сборка, типы, unit-тесты, проверка миграций
         run: pnpm check
