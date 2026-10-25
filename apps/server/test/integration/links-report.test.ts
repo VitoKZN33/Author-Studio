@@ -162,7 +162,7 @@ describe('сводный отчёт', () => {
       views: 240,
     });
     expect(b.reach.posts[0].viewsAt).toMatchObject({ h1: 50, h24: 240, h48: null });
-    expect(b.reach.posts[0].reachPct).toBe(50);
+    expect(b.reach.posts[0].reachPct).toBe(48); // 240 из текущих 500, не из 480 на момент выхода
     expect(b.ads).toMatchObject({ count: 1, avgViews: 240 });
     expect(b.effectiveness.rubrics[0]).toMatchObject({ key: 'кофе', posts: 1 });
   });

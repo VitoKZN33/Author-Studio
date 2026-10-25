@@ -148,7 +148,9 @@ export function buildPosts(
       forwards: latest(primary.messageId, 'forwards'),
       reactions,
       subscribersAtPost: subsAt,
-      reachPct: engagementRate(views, subsAt),
+      // Охват — от текущей аудитории: так цифра сопоставима между постами и с числом
+      // подписчиков на экране; число на момент выхода остаётся в subscribersAtPost.
+      reachPct: engagementRate(views, subs.at(-1)?.value ?? subsAt),
       reactionRatePct: views !== null && reactions !== null ? pct(reactions, views) : null,
     };
   });
