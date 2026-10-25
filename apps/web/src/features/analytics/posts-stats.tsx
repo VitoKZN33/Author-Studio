@@ -104,21 +104,24 @@ function PostCard({
     }
   }
 
-  const metric = (label: string, v: MetricValue | null, kind: 'fact' | 'manual') => (
-    <div className="flex flex-col gap-0.5">
-      <dt className="text-xs text-text-faint">{label}</dt>
-      <dd className="flex items-center gap-1.5">
-        {v ? (
-          <>
-            <span className="text-[15px] tabular-nums">{format.number(v.value)}</span>
-            <KindTag kind={kind} />
-          </>
-        ) : (
-          <KindTag kind="none" />
-        )}
-      </dd>
-    </div>
-  );
+  const metric = (label: string, v: MetricValue | null, fallback: 'fact' | 'manual') => {
+    const kind = v ? (v.source === 'manual' ? 'manual' : 'fact') : fallback;
+    return (
+      <div className="flex flex-col gap-0.5">
+        <dt className="text-xs text-text-faint">{label}</dt>
+        <dd className="flex items-center gap-1.5">
+          {v ? (
+            <>
+              <span className="text-[15px] tabular-nums">{format.number(v.value)}</span>
+              <KindTag kind={kind} />
+            </>
+          ) : (
+            <KindTag kind="none" />
+          )}
+        </dd>
+      </div>
+    );
+  };
 
   return (
     <li className="rounded-[var(--radius-card)] border border-border bg-surface px-4 py-3">

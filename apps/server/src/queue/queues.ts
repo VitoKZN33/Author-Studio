@@ -12,6 +12,8 @@ export const QUEUE_NAMES = {
   publications: 'publications',
   /** Сбор метрик каналов по расписанию. */
   metrics: 'metrics',
+  /** Просмотры и пересылки через аккаунт владельца (MTProto, ADR-036). */
+  views: 'views',
 } as const;
 export type QueueName = (typeof QUEUE_NAMES)[keyof typeof QUEUE_NAMES];
 

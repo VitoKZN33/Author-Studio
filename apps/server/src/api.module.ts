@@ -4,6 +4,7 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { LoggerModule } from 'nestjs-pino';
 import { AnalyticsApiModule } from './analytics/analytics-api.module.js';
 import { AiApiModule } from './ai/ai.module.js';
+import { MtprotoApiModule } from './mtproto/mtproto.module.js';
 import { AuditModule } from './audit/audit.module.js';
 import { AuthGuard } from './auth/auth.guard.js';
 import { AuthModule } from './auth/auth.module.js';
@@ -49,6 +50,7 @@ import { RedisModule } from './redis/redis.module.js';
     SettingsApiModule,
     AnalyticsApiModule,
     AiApiModule,
+    MtprotoApiModule,
   ],
   providers: [
     { provide: APP_FILTER, useClass: HttpExceptionFilter },

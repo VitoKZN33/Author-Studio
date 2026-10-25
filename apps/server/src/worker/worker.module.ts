@@ -4,6 +4,7 @@ import { AnalyticsWorkerModule } from '../analytics/analytics-worker.module.js';
 import { AuditModule } from '../audit/audit.module.js';
 import { BotWorkerModule } from '../bot/bot-worker.module.js';
 import { MediaModule } from '../media/media.module.js';
+import { MtprotoWorkerModule } from '../mtproto/mtproto.module.js';
 import { NotificationsModule } from '../notifications/notifications.module.js';
 import { PublishingWorkerModule } from '../publishing/publishing-worker.module.js';
 import { SettingsModule } from '../settings/settings.module.js';
@@ -31,6 +32,7 @@ import { SystemProcessor } from './system.processor.js';
     BotWorkerModule,
     PublishingWorkerModule,
     AnalyticsWorkerModule,
+    MtprotoWorkerModule,
   ],
   providers: [HeartbeatService, SystemProcessor],
 })

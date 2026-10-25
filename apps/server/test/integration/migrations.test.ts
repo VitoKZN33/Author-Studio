@@ -22,6 +22,7 @@ describe('миграции БД', () => {
       'installation_settings',
       'media_assets',
       'message_metric_snapshots',
+      'mtproto_account',
       'posts',
       'publication_attempts',
       'publications',

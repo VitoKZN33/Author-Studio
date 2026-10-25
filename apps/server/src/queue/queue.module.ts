@@ -10,6 +10,7 @@ export const TELEGRAM_UPDATES_QUEUE = Symbol('TELEGRAM_UPDATES_QUEUE');
 export const NOTIFICATIONS_QUEUE = Symbol('NOTIFICATIONS_QUEUE');
 export const PUBLICATIONS_QUEUE = Symbol('PUBLICATIONS_QUEUE');
 export const METRICS_QUEUE = Symbol('METRICS_QUEUE');
+export const VIEWS_QUEUE = Symbol('VIEWS_QUEUE');
 
 @Global()
 @Module({
@@ -44,6 +45,11 @@ export const METRICS_QUEUE = Symbol('METRICS_QUEUE');
       inject: [BULL_CONNECTION],
       useFactory: (conn: Redis) => createQueue(QUEUE_NAMES.metrics, conn),
     },
+    {
+      provide: VIEWS_QUEUE,
+      inject: [BULL_CONNECTION],
+      useFactory: (conn: Redis) => createQueue(QUEUE_NAMES.views, conn),
+    },
   ],
   exports: [
     BULL_CONNECTION,
@@ -52,6 +58,7 @@ export const METRICS_QUEUE = Symbol('METRICS_QUEUE');
     NOTIFICATIONS_QUEUE,
     PUBLICATIONS_QUEUE,
     METRICS_QUEUE,
+    VIEWS_QUEUE,
   ],
 })
 export class QueueModule implements OnApplicationShutdown {
@@ -61,6 +68,7 @@ export class QueueModule implements OnApplicationShutdown {
     @Inject(NOTIFICATIONS_QUEUE) private readonly notificationsQueue: Queue,
     @Inject(PUBLICATIONS_QUEUE) private readonly publicationsQueue: Queue,
     @Inject(METRICS_QUEUE) private readonly metricsQueue: Queue,
+    @Inject(VIEWS_QUEUE) private readonly viewsQueue: Queue,
     @Inject(BULL_CONNECTION) private readonly connection: Redis,
   ) {}
 
@@ -71,6 +79,7 @@ export class QueueModule implements OnApplicationShutdown {
       this.notificationsQueue.close(),
       this.publicationsQueue.close(),
       this.metricsQueue.close(),
+      this.viewsQueue.close(),
     ]);
     this.connection.disconnect();
   }

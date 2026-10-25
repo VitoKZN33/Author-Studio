@@ -274,7 +274,8 @@ export const publicationAttempts = pgTable(
  * manual       — введено владельцем вручную (просмотры, пересылки).
  * Ряды и изменения во времени — измерения системы на основе этих снимков.
  */
-export const metricSource = pgEnum('metric_source', ['telegram_api', 'manual']);
+/** telegram_api — Bot API, manual — ввёл владелец, mtproto — аккаунт владельца (ADR-036). */
+export const metricSource = pgEnum('metric_source', ['telegram_api', 'manual', 'mtproto']);
 
 /** Снимки показателей канала (число подписчиков). История — с момента установки. */
 export const channelMetricSnapshots = pgTable(
@@ -419,4 +420,38 @@ export const aiRequests = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index('ai_requests_created_idx').on(t.createdAt)],
+);
+
+// ---------------------------------------------------------------- Просмотры через аккаунт владельца (ADR-036)
+
+export const mtprotoStatus = pgEnum('mtproto_status', [
+  'disconnected',
+  'active',
+  'flood_wait',
+  'error',
+]);
+
+/**
+ * Аккаунт владельца для Telegram API (MTProto) — только чтение просмотров и пересылок
+ * его каналов. Сессия = полный доступ к аккаунту, поэтому хранится только в
+ * зашифрованном виде и никогда не возвращается в интерфейс.
+ */
+export const mtprotoAccount = pgTable(
+  'mtproto_account',
+  {
+    id: smallint('id').primaryKey().default(1),
+    apiId: integer('api_id'),
+    apiHashEncrypted: text('api_hash_encrypted'),
+    sessionEncrypted: text('session_encrypted'),
+    tgUserId: bigint('tg_user_id', { mode: 'bigint' }),
+    displayName: text('display_name'),
+    phoneMask: text('phone_mask'),
+    status: mtprotoStatus('status').notNull().default('disconnected'),
+    floodUntil: timestamp('flood_until', { withTimezone: true }),
+    lastSyncAt: timestamp('last_sync_at', { withTimezone: true }),
+    lastSyncCount: integer('last_sync_count'),
+    lastError: text('last_error'),
+    ...timestamps,
+  },
+  (t) => [check('mtproto_account_singleton', sql`${t.id} = 1`)],
 );

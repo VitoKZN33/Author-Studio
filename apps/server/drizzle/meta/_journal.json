@@ -36,6 +36,13 @@
       "when": 1792924696556,
       "tag": "0004_ai",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1792931056441,
+      "tag": "0005_mtproto_views",
+      "breakpoints": true
     }
   ]
 }

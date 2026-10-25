@@ -186,7 +186,7 @@ export function PostViewScreen() {
               <Metric
                 label={t('views')}
                 value={s?.views?.value ?? null}
-                kind={s?.views ? 'manual' : 'none'}
+                kind={s?.views ? (s.views.source === 'manual' ? 'manual' : 'fact') : 'none'}
               />
               <Metric
                 label="ERR"

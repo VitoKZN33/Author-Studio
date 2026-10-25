@@ -25,7 +25,7 @@ export interface Overview {
 export interface MetricValue {
   value: number;
   measuredAt: string;
-  source: 'telegram_api' | 'manual';
+  source: 'telegram_api' | 'manual' | 'mtproto';
 }
 
 export interface PostStats {
