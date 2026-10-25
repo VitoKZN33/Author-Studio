@@ -29,6 +29,10 @@
 		header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' https://telegram.org; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; media-src 'self' blob:; connect-src 'self'; frame-ancestors https://web.telegram.org https://*.telegram.org; base-uri 'self'; form-action 'self'; object-src 'none'"
 		@immutable path /_next/static/*
 		header @immutable Cache-Control "public, max-age=31536000, immutable"
+		# Страницы и служебные файлы сборки — всегда проверять свежесть: иначе WebView
+		# Telegram может показывать старую версию приложения после обновления.
+		@pages not path /_next/static/*
+		header @pages Cache-Control "no-cache"
 		try_files {path} {path}/index.html /404.html
 		file_server
 	}
