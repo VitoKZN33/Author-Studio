@@ -635,20 +635,16 @@ describe('рекламный пост и срок публикации', () => {
     return r.body as { id: string; version: number };
   }
 
-  it('рекламный пост без пометки «Реклама» и erid не отправляется; с маркировкой — уходит', async () => {
-    const d = await adDraft('Скидки в кофейне', { advertiser: 'ООО «Зерно»', inn: '1655000000' });
+  it('рекламный пост без хэштега #реклама не отправляется; с хэштегом — уходит', async () => {
+    const d = await adDraft('Скидки в кофейне. Реклама');
     const bad = await api('POST', `/posts/${d.id}/publish`, {
       channelIds: [channelA],
       version: d.version,
     });
     expect(bad.status).toBe(422);
-    expect(bad.body.error.details.missing).toEqual(
-      expect.arrayContaining(['пометка «Реклама»', 'токен erid']),
-    );
+    expect(bad.body.error.details.missing).toEqual(['хэштег #реклама']);
     const saved = await api('PUT', `/posts/${d.id}`, {
-      content: textContent(
-        'Реклама. ООО «Зерно», ИНН 1655000000. erid: 2SDnje1\n\nСкидки в кофейне',
-      ),
+      content: textContent('Скидки в кофейне\n\n#реклама'),
       version: d.version,
     });
     const ok = await api('POST', `/posts/${d.id}/publish`, {
@@ -658,8 +654,8 @@ describe('рекламный пост и срок публикации', () => {
     expect(ok.status).toBe(200);
   });
 
-  it('«ERID не требуется» снимает проверку; ИНН проверяется по формату', async () => {
-    const d = await adDraft('Взаимный пиар с каналом друга');
+  it('данные рекламы сохраняются, но для публикации нужен только хэштег; ИНН проверяется по формату', async () => {
+    const d = await adDraft('Взаимный пиар с каналом друга #реклама');
     expect((await api('PUT', `/posts/${d.id}/ad`, { inn: '123' })).status).toBe(400);
     const r = await api('PUT', `/posts/${d.id}/ad`, { noErid: true });
     expect(r.body.ad).toEqual({ noErid: true });

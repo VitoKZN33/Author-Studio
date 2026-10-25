@@ -134,15 +134,6 @@ function EditorLoaded({ initial }: { initial: PostView }) {
 
   /** Текст от AI (или возврат прежнего): редактор пересоздаётся из нового содержимого. */
   /** Строка в начало текста (маркировка рекламы): смещения entities сдвигаются. */
-  function prependLine(line: string) {
-    const sep = content.text.trim() ? '\n\n' : '';
-    const shift = line.length + sep.length;
-    applyText({
-      text: line + sep + content.text,
-      entities: content.entities.map((e) => ({ ...e, offset: e.offset + shift })),
-    });
-  }
-
   function appendText(extra: string) {
     const sep = content.text.trim() ? '\n\n' : '';
     applyText({ text: content.text + sep + extra, entities: content.entities });
@@ -305,15 +296,7 @@ function EditorLoaded({ initial }: { initial: PostView }) {
               </span>
             </div>
           </div>
-          {kind === 'ad' && (
-            <AdPanel
-              postId={initial.id}
-              initial={ad}
-              text={content.text}
-              onInsert={prependLine}
-              onChange={setAd}
-            />
-          )}
+          {kind === 'ad' && <AdPanel text={content.text} onInsert={appendText} />}
           <MediaPanel items={orderedMedia} onChange={onMedia} />
           <EditorAiPanel
             current={{ text: content.text, entities: content.entities }}

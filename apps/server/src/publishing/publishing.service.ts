@@ -79,14 +79,14 @@ export class PublishingService {
       });
     }
 
-    // Рекламный пост: без пометки «Реклама» и ERID не отправляем (если маркировка нужна).
+    // Рекламный пост: без хэштега #реклама не отправляем (ADR-039).
     if (post.kind === 'ad') {
       const missing = adMarkingMissing(post.content.text, post.ad ?? {}).map(
         (k) => AD_MARKING_LABELS[k],
       );
       if (missing.length) {
         throw new UnprocessableEntityException({
-          message: `В рекламном посте нет обязательной маркировки: ${missing.join(', ')}. Добавьте её в редакторе (кнопка «Вставить маркировку») или отметьте, что ERID не требуется.`,
+          message: 'В рекламном посте нет хэштега #реклама. Добавьте его в текст.',
           details: { code: 'ad_marking', missing },
         });
       }
