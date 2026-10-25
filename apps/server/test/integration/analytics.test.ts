@@ -35,7 +35,7 @@ let base: string;
 let auth: Record<string, string>;
 let channelId: string;
 let updateId = 5000;
-let memberCount = 100;
+const memberCount = 100;
 const db = () => app.get(PG_POOL);
 
 async function api(method: string, path: string, body?: unknown) {
@@ -45,7 +45,7 @@ async function api(method: string, path: string, body?: unknown) {
     body: body === undefined ? undefined : JSON.stringify(body),
   });
   const text = await res.text();
-  let json: Json = null;
+  let json: Json;
   try {
     json = JSON.parse(text);
   } catch {
