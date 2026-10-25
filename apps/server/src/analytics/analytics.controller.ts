@@ -98,6 +98,17 @@ export class AnalyticsController {
     return this.analytics.bestTime(req.auth.userId, id, q.days, q.metric);
   }
 
+  @Post('export')
+  @HttpCode(204)
+  @ApiOperation({ summary: 'Отправить CSV с показателями постов в чат с ботом' })
+  async export(
+    @Req() req: AuthenticatedRequest,
+    @Param('channelId', ParseUUIDPipe) id: string,
+    @Query(new ZodValidationPipe(overviewQuery)) q: z.infer<typeof overviewQuery>,
+  ): Promise<void> {
+    await this.analytics.sendCsvToOwner(req.auth.userId, id, q.days);
+  }
+
   @Get('posts.csv')
   @Header('Content-Type', 'text/csv; charset=utf-8')
   @ApiOperation({ summary: 'Экспорт показателей постов (CSV, разделитель «;»)' })

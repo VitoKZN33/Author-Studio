@@ -346,4 +346,18 @@ describe('показатели постов и ручной ввод', () => {
     expect(text).toContain("'=Опасная формула");
     expect(text).not.toMatch(/;=Опасная/);
   });
+
+  it('экспорт в чат с ботом: документ уходит владельцу', async () => {
+    fake.on('sendDocument', () => ({
+      message_id: 1,
+      date: 0,
+      chat: { id: OWNER_ID, type: 'private' },
+    }));
+    const r = await api('POST', `/analytics/channels/${channelId}/export?days=7`);
+    expect(r.status).toBe(204);
+    const call = fake.callsOf('sendDocument')[0]!;
+    expect(call.params.multipart).toBe(true);
+    expect(String(call.params.raw)).toContain(String(OWNER_ID));
+    expect(String(call.params.raw)).toContain('posts-');
+  });
 });

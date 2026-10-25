@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useFormatter, useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { useSession } from '../session/session';
@@ -49,6 +50,15 @@ export function SettingsScreen() {
           </div>
         ))}
       </dl>
+      <Link
+        href="/channels/"
+        className="flex min-h-12 items-center justify-between rounded-[var(--radius-card)] border border-border bg-surface px-4 text-sm hover:border-border-strong"
+      >
+        {t('channelsLink')}
+        <span aria-hidden className="text-text-faint">
+          ›
+        </span>
+      </Link>
       <NotificationSettings />
       <p className="max-w-prose text-sm text-text-muted">{t('more')}</p>
       <div>

@@ -1,6 +1,15 @@
-import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Inject,
+  Injectable,
+  NotFoundException,
+  ServiceUnavailableException,
+} from '@nestjs/common';
+import { InputFile } from 'grammy';
 import { and, asc, desc, eq, gte, inArray, lte } from 'drizzle-orm';
 import { AuditService } from '../audit/audit.service.js';
+import { TELEGRAM_CLIENT } from '../telegram/telegram.module.js';
+import type { TelegramClient } from '../telegram/telegram-client.js';
 import { APP_CONFIG, type AppConfig } from '../config/config.module.js';
 import { DB, type Database } from '../database/database.module.js';
 import {
@@ -53,6 +62,7 @@ export class AnalyticsService {
     @Inject(APP_CONFIG) private readonly config: AppConfig,
     @Inject(DB) private readonly db: Database,
     private readonly audit: AuditService,
+    @Inject(TELEGRAM_CLIENT) private readonly telegram: TelegramClient | null,
   ) {}
 
   private tz() {
@@ -347,5 +357,26 @@ export class AnalyticsService {
         .join(';'),
     );
     return '﻿' + [header.join(';'), ...lines].join('\r\n');
+  }
+
+  /**
+   * Отправка CSV владельцу в чат с ботом: скачивание файлов внутри Mini App работает
+   * не во всех клиентах Telegram, а документ в чате открывается везде.
+   */
+  async sendCsvToOwner(ownerId: string, channelId: string, days: number): Promise<void> {
+    const ownerChat = this.config.OWNER_TELEGRAM_ID;
+    if (!this.telegram || !ownerChat) throw new ServiceUnavailableException('Бот не настроен');
+    const c = await this.channel(ownerId, channelId);
+    const body = await this.csv(ownerId, channelId, days);
+    const date = new Date().toISOString().slice(0, 10);
+    await this.telegram.call('sendDocument', (api) =>
+      api.sendDocument(
+        ownerChat,
+        new InputFile(Buffer.from(body, 'utf8'), `posts-${date}-${days}d.csv`),
+        {
+          caption: `Показатели постов «${c.title}» за ${days} дн. Просмотры и пересылки — введённые вручную.`,
+        },
+      ),
+    );
   }
 }
