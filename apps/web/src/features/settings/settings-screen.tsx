@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { useSession } from '../session/session';
 import { useSystemInfo } from '../system/use-system-info';
 import { confirmAction } from '@/shared/telegram';
+import { NotificationSettings } from './notification-settings';
 
 export function SettingsScreen() {
   const t = useTranslations('settings');
@@ -48,6 +49,7 @@ export function SettingsScreen() {
           </div>
         ))}
       </dl>
+      <NotificationSettings />
       <p className="max-w-prose text-sm text-text-muted">{t('more')}</p>
       <div>
         <button

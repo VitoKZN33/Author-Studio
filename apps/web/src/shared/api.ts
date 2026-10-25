@@ -17,6 +17,10 @@ export function setSessionToken(value: string | null): void {
   token = value;
 }
 
+export function getSessionToken(): string | null {
+  return token;
+}
+
 /** Обработчик 401: пытается войти заново; true — можно повторить запрос. */
 export function setUnauthorizedHandler(handler: (() => Promise<boolean>) | null): void {
   onUnauthorized = handler;
@@ -66,4 +70,46 @@ async function request<T>(
 export const api = {
   get: <T>(path: string) => request<T>('GET', path, undefined, false),
   post: <T>(path: string, body?: unknown) => request<T>('POST', path, body ?? {}, false),
+  put: <T>(path: string, body: unknown) => request<T>('PUT', path, body, false),
+  del: <T>(path: string) => request<T>('DELETE', path, undefined, false),
 };
+
+/** Загрузка файла с прогрессом (fetch не сообщает о прогрессе отправки). */
+export function uploadFile<T>(
+  path: string,
+  file: File,
+  onProgress: (share: number) => void,
+): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', `/api${path}`);
+    if (token) xhr.setRequestHeader('authorization', `Bearer ${token}`);
+    xhr.upload.onprogress = (e) => e.lengthComputable && onProgress(e.loaded / e.total);
+    xhr.onerror = () => reject(new ApiError(0, NETWORK_ERROR));
+    xhr.onload = () => {
+      let payload: { error?: { message?: string } } | null = null;
+      try {
+        payload = JSON.parse(xhr.responseText) as { error?: { message?: string } };
+      } catch {
+        // ответ не JSON (например, обрыв на прокси)
+      }
+      if (xhr.status >= 200 && xhr.status < 300) resolve(payload as T);
+      else
+        reject(
+          new ApiError(xhr.status, payload?.error?.message ?? `Ошибка загрузки (${xhr.status})`),
+        );
+    };
+    const form = new FormData();
+    form.append('file', file);
+    xhr.send(form);
+  });
+}
+
+/** Файл, доступный только с токеном, как object URL (для <img>/<video>). */
+export async function fetchObjectUrl(path: string): Promise<string> {
+  const res = await fetch(`/api${path}`, {
+    headers: token ? { authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) throw new ApiError(res.status, `Файл недоступен (${res.status})`);
+  return URL.createObjectURL(await res.blob());
+}

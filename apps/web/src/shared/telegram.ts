@@ -15,6 +15,8 @@ interface TelegramWebApp {
   setBackgroundColor(color: string): void;
   isVersionAtLeast(version: string): boolean;
   showConfirm(message: string, callback: (ok: boolean) => void): void;
+  enableClosingConfirmation?(): void;
+  disableClosingConfirmation?(): void;
   HapticFeedback?: { notificationOccurred(type: 'error' | 'success' | 'warning'): void };
 }
 
@@ -63,4 +65,12 @@ export function haptic(type: 'error' | 'success' | 'warning'): void {
   } catch {
     // Тактильный отклик необязателен.
   }
+}
+
+/** Подтверждение закрытия Mini App, пока есть несохранённые изменения. */
+export function setClosingConfirmation(enabled: boolean): void {
+  const app = getWebApp();
+  if (!app?.isVersionAtLeast('6.2')) return;
+  if (enabled) app.enableClosingConfirmation?.();
+  else app.disableClosingConfirmation?.();
 }

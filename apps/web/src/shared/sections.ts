@@ -13,7 +13,7 @@ export const SECTIONS = [
 export type SectionKey = (typeof SECTIONS)[number]['key'];
 
 /** Последний завершённый этап: разделы более поздних этапов показываются неактивными. */
-export const CURRENT_STAGE = 3;
+export const CURRENT_STAGE = 4;
 
 /** Разделы нижней панели на смартфоне (не больше пяти). */
 export const MOBILE_TABS: readonly SectionKey[] = [
