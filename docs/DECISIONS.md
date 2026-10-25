@@ -44,12 +44,26 @@ Mini App работает внутри Telegram, SSR и SEO не дают пол
 Testcontainers или compose), Playwright для UI.** Предложено.
 В ТЗ (раздел 20) упомянут pytest — для TypeScript-стека его заменяет Vitest.
 
-**ADR-012. Версии зависимостей.** Открыто.
-Реестр npm и nodejs.org из рабочей среды недоступны (соединение отклонено прокси),
-поэтому версии не сверены. Ориентир по состоянию знаний на середину 2026:
-Node.js 24 LTS, Next.js 16, React 19, NestJS 11, Prisma 7, BullMQ 5, PostgreSQL 17,
-Redis 7/8 (или Valkey 8). Точные версии фиксирую в начале этапа 2, когда появится
-доступ к реестру, с записью в этот файл.
+**ADR-012. Версии зависимостей.** Предложено. Сверено с реестром npm и
+nodejs.org 2026-10-25; точные версии фиксируются lock-файлом на этапе 2.
+
+| Компонент | Версия | Примечание |
+|---|---|---|
+| Node.js | 24.x LTS (24.22.1) | 26.x — Current, не LTS; Prisma поддерживает ^24.11 |
+| pnpm | 12.x | |
+| TypeScript | **6.0.x** | 7.0 (нативный компилятор) уже latest, но NestJS опирается на `emitDecoratorMetadata`; переход на 7 — после проверки совместимости |
+| Next.js / React | 16.4 / 19.3 | static export |
+| NestJS | 12.2 | |
+| Prisma | **7.10.x** | тег `latest` указывает на 8.0.0-rc — релиз-кандидат не берём |
+| BullMQ / ioredis | 6.4 / 6.0 | |
+| grammY | 1.46 | |
+| @tma.js/sdk-react, @tma.js/init-data-node | 3.0 / 2.0 | |
+| zod | 4.6 | |
+| nestjs-pino | 5.3 | |
+| Vitest / Playwright / Testcontainers | 5.0 / 1.64 / 12.2 | |
+| Tailwind CSS / TipTap / Recharts / next-intl | 4.3 / 3.32 / 3.10 / 4.14 | |
+| openai (SDK для OpenAI-compatible) | 7.43 | |
+| PostgreSQL / Redis (образы) | 17 / 8 | теги образов сверю на этапе 2 |
 
 ## Открытые вопросы к владельцу проекта
 1. Просмотры/пересылки: ручной ввод (рекомендую для MVP) или опциональный MTProto-коннектор.
