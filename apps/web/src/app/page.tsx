@@ -1,4 +1,5 @@
 import { getTranslations } from 'next-intl/server';
+import { ChannelsSummary } from '@/features/overview/channels-summary';
 import { SystemStatus } from '@/features/system/system-status';
 import { AppShell } from '@/shared/ui/app-shell';
 
@@ -7,8 +8,11 @@ export default async function OverviewPage() {
   return (
     <AppShell active="overview">
       <h1 className="text-xl font-semibold tracking-tight">{t('title')}</h1>
-      <p className="mt-2 mb-5 max-w-prose text-sm text-text-muted">{t('foundationNotice')}</p>
-      <SystemStatus />
+      <p className="mt-1.5 mb-6 max-w-prose text-sm text-text-muted">{t('notice')}</p>
+      <div className="flex flex-col gap-4">
+        <ChannelsSummary />
+        <SystemStatus />
+      </div>
     </AppShell>
   );
 }

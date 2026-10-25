@@ -7,11 +7,17 @@ const pool = new pg.Pool({ connectionString: testEnv().db, max: 2 });
 afterAll(() => pool.end());
 
 describe('миграции БД', () => {
-  it('создают базовые таблицы и строку настроек установки', async () => {
+  it('создают таблицы и строку настроек установки', async () => {
     const { rows } = await pool.query<{ table_name: string }>(
       "select table_name from information_schema.tables where table_schema='public' order by 1",
     );
-    expect(rows.map((r) => r.table_name)).toEqual(['audit_log', 'installation_settings', 'users']);
+    expect(rows.map((r) => r.table_name)).toEqual([
+      'audit_log',
+      'channels',
+      'installation_settings',
+      'sessions',
+      'users',
+    ]);
     const settings = await pool.query(
       'select product_name, timezone, locale from installation_settings',
     );

@@ -6,6 +6,8 @@ import { createBullConnection, createQueue, QUEUE_NAMES } from './queues.js';
 
 export const BULL_CONNECTION = Symbol('BULL_CONNECTION');
 export const SYSTEM_QUEUE = Symbol('SYSTEM_QUEUE');
+export const TELEGRAM_UPDATES_QUEUE = Symbol('TELEGRAM_UPDATES_QUEUE');
+export const NOTIFICATIONS_QUEUE = Symbol('NOTIFICATIONS_QUEUE');
 
 @Global()
 @Module({
@@ -20,17 +22,33 @@ export const SYSTEM_QUEUE = Symbol('SYSTEM_QUEUE');
       inject: [BULL_CONNECTION],
       useFactory: (conn: Redis) => createQueue(QUEUE_NAMES.system, conn),
     },
+    {
+      provide: TELEGRAM_UPDATES_QUEUE,
+      inject: [BULL_CONNECTION],
+      useFactory: (conn: Redis) => createQueue(QUEUE_NAMES.telegramUpdates, conn),
+    },
+    {
+      provide: NOTIFICATIONS_QUEUE,
+      inject: [BULL_CONNECTION],
+      useFactory: (conn: Redis) => createQueue(QUEUE_NAMES.notifications, conn),
+    },
   ],
-  exports: [BULL_CONNECTION, SYSTEM_QUEUE],
+  exports: [BULL_CONNECTION, SYSTEM_QUEUE, TELEGRAM_UPDATES_QUEUE, NOTIFICATIONS_QUEUE],
 })
 export class QueueModule implements OnApplicationShutdown {
   constructor(
     @Inject(SYSTEM_QUEUE) private readonly systemQueue: Queue,
+    @Inject(TELEGRAM_UPDATES_QUEUE) private readonly updatesQueue: Queue,
+    @Inject(NOTIFICATIONS_QUEUE) private readonly notificationsQueue: Queue,
     @Inject(BULL_CONNECTION) private readonly connection: Redis,
   ) {}
 
   async onApplicationShutdown(): Promise<void> {
-    await this.systemQueue.close();
+    await Promise.all([
+      this.systemQueue.close(),
+      this.updatesQueue.close(),
+      this.notificationsQueue.close(),
+    ]);
     this.connection.disconnect();
   }
 }

@@ -4,6 +4,10 @@ import { Redis } from 'ioredis';
 /** Имена очередей. Новые очереди (публикации, метрики…) добавляются на своих этапах. */
 export const QUEUE_NAMES = {
   system: 'system',
+  /** Обновления Telegram из webhook: API кладёт, worker обрабатывает. */
+  telegramUpdates: 'telegram-updates',
+  /** Исходящие уведомления владельцу через бота. */
+  notifications: 'notifications',
 } as const;
 export type QueueName = (typeof QUEUE_NAMES)[keyof typeof QUEUE_NAMES];
 

@@ -63,8 +63,35 @@ export const envSchema = z
       }),
     ),
     ENABLE_API_DOCS: optional(booleanFromString),
+    /** Адрес Bot API (по умолчанию api.telegram.org). Для Local Bot API Server и тестов. */
+    TELEGRAM_API_ROOT: optional(
+      z.url({ error: 'ожидается адрес, например https://api.telegram.org' }),
+    ),
+    /**
+     * Регистрировать webhook, меню и команды бота при старте worker.
+     * По умолчанию — только в production, чтобы локальный запуск не перехватил бота.
+     */
+    TELEGRAM_AUTO_SETUP: optional(booleanFromString),
+    AUTH_INIT_DATA_MAX_AGE_SECONDS: z.coerce.number().int().min(60).max(86_400).default(3_600),
+    SESSION_TTL_HOURS: z.coerce.number().int().min(1).max(720).default(12),
+    /** Попыток входа в минуту с одного адреса. */
+    AUTH_LOGIN_RATE_LIMIT: z.coerce.number().int().min(1).max(1_000).default(10),
   })
   .superRefine((env, ctx) => {
+    if (env.TELEGRAM_BOT_TOKEN && !env.TELEGRAM_WEBHOOK_SECRET) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['TELEGRAM_WEBHOOK_SECRET'],
+        message: 'обязателен, если задан TELEGRAM_BOT_TOKEN (сгенерируйте: openssl rand -hex 32)',
+      });
+    }
+    if (env.TELEGRAM_BOT_TOKEN && !env.OWNER_TELEGRAM_ID) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['OWNER_TELEGRAM_ID'],
+        message: 'обязателен, если задан TELEGRAM_BOT_TOKEN (узнать свой ID: @userinfobot)',
+      });
+    }
     if (env.NODE_ENV === 'production' && !env.PUBLIC_URL.startsWith('https://')) {
       ctx.addIssue({
         code: 'custom',
