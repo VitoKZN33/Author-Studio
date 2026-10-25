@@ -68,6 +68,24 @@ export const envSchema = z
       z.url({ error: 'ожидается адрес, например https://api.telegram.org' }),
     ),
     /**
+     * Прокси для запросов к Bot API: http://, https://, socks5:// или socks5h://
+     * (логин и пароль — в адресе). Нужен, если сервер не может напрямую подключиться
+     * к api.telegram.org (например, из ряда дата-центров в РФ).
+     */
+    TELEGRAM_PROXY_URL: optional(
+      z.string().regex(/^(https?|socks5h?):\/\/[^\s]+$/, {
+        error: 'ожидается адрес вида socks5://логин:пароль@хост:порт или http://хост:порт',
+      }),
+    ),
+    /**
+     * Как получать обновления: webhook (Telegram сам присылает их на PUBLIC_URL) или
+     * polling (worker забирает их запросами getUpdates — не требует входящих соединений
+     * от Telegram и работает через TELEGRAM_PROXY_URL).
+     */
+    TELEGRAM_UPDATES_MODE: z
+      .enum(['webhook', 'polling'], { error: 'допустимые значения: webhook, polling' })
+      .default('webhook'),
+    /**
      * Регистрировать webhook, меню и команды бота при старте worker.
      * По умолчанию — только в production, чтобы локальный запуск не перехватил бота.
      */
@@ -110,6 +128,7 @@ export const SECRET_ENV_KEYS = [
   'APP_ENCRYPTION_KEY',
   'TELEGRAM_BOT_TOKEN',
   'TELEGRAM_WEBHOOK_SECRET',
+  'TELEGRAM_PROXY_URL',
 ] as const satisfies readonly (keyof Env)[];
 
 export class EnvValidationError extends Error {

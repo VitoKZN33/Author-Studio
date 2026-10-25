@@ -1,4 +1,7 @@
 import { Api, GrammyError, HttpError } from 'grammy';
+import { HttpsProxyAgent } from 'https-proxy-agent';
+import type { Agent } from 'node:http';
+import { SocksProxyAgent } from 'socks-proxy-agent';
 
 export type TelegramErrorKind = 'rate_limited' | 'transient' | 'permanent' | 'unauthorized';
 
@@ -54,14 +57,27 @@ export function classifyTelegramError(err: unknown, method: string): TelegramApi
   );
 }
 
-/** Тонкая обёртка над grammY Api: единая классификация ошибок и тайм-аут. */
+/** Агент Node.js для прокси: SOCKS5 или HTTP(S) CONNECT. */
+export function createProxyAgent(proxyUrl: string): Agent {
+  return /^socks/i.test(proxyUrl) ? new SocksProxyAgent(proxyUrl) : new HttpsProxyAgent(proxyUrl);
+}
+
+export interface TelegramClientOptions {
+  apiRoot?: string;
+  proxyUrl?: string;
+}
+
+/** Тонкая обёртка над grammY Api: единая классификация ошибок, тайм-аут, прокси. */
 export class TelegramClient {
   readonly api: Api;
   readonly botId: number;
 
-  constructor(token: string, apiRoot?: string) {
+  constructor(token: string, options: TelegramClientOptions = {}) {
     this.api = new Api(token, {
-      ...(apiRoot ? { apiRoot } : {}),
+      ...(options.apiRoot ? { apiRoot: options.apiRoot } : {}),
+      ...(options.proxyUrl
+        ? { baseFetchConfig: { agent: createProxyAgent(options.proxyUrl), compress: true } }
+        : {}),
       timeoutSeconds: 30,
     });
     this.botId = Number(token.split(':')[0]);

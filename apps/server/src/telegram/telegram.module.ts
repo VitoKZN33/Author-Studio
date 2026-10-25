@@ -13,7 +13,10 @@ export const TELEGRAM_CLIENT = Symbol('TELEGRAM_CLIENT');
       inject: [APP_CONFIG],
       useFactory: (config: AppConfig): TelegramClient | null =>
         config.TELEGRAM_BOT_TOKEN
-          ? new TelegramClient(config.TELEGRAM_BOT_TOKEN, config.TELEGRAM_API_ROOT)
+          ? new TelegramClient(config.TELEGRAM_BOT_TOKEN, {
+              apiRoot: config.TELEGRAM_API_ROOT,
+              proxyUrl: config.TELEGRAM_PROXY_URL,
+            })
           : null,
     },
   ],
