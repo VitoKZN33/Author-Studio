@@ -76,7 +76,7 @@ function NavItem({ item, active, variant, soon }: NavItemProps) {
   const base =
     variant === 'side'
       ? 'flex items-center justify-between rounded-[var(--radius-control)] px-3 py-2 text-sm'
-      : 'flex min-h-14 items-center justify-center px-1 text-center text-[11px] leading-tight';
+      : 'flex min-h-14 min-w-0 items-center justify-center px-0.5 text-center text-[11px] leading-tight [overflow-wrap:anywhere]';
   const tone = active ? 'bg-surface-2 text-text' : 'text-text-muted';
   const tabTone = active ? 'text-text font-medium' : 'text-text-faint';
 

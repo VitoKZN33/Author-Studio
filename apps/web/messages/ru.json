@@ -47,7 +47,7 @@
     "checkedAt": "Проверено {when}",
     "connect": {
       "label": "Адрес канала",
-      "placeholder": "@username или t.me/username",
+      "placeholder": "@канал или ссылка t.me",
       "submit": "Подключить",
       "busy": "Проверяем…",
       "failed": "Не удалось подключить канал."
@@ -126,5 +126,15 @@
     },
     "ok": "Работает",
     "fail": "Сбой"
+  },
+  "navShort": {
+    "overview": "Главная",
+    "posts": "Посты",
+    "calendar": "План",
+    "channels": "Каналы",
+    "settings": "Настройки",
+    "ads": "Реклама",
+    "analytics": "Аналитика",
+    "ai": "AI"
   }
 }
