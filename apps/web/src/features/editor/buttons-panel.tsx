@@ -45,31 +45,33 @@ export function ButtonsPanel({ rows, onChange, disabledReason }: Props) {
           className="flex flex-col gap-2 rounded-[var(--radius-control)] border border-border p-2"
         >
           {row.map((btn, b) => (
-            <div key={b} className="grid grid-cols-[1fr_auto] gap-2 sm:grid-cols-[1fr_1.4fr_auto]">
-              <input
-                value={btn.text}
-                maxLength={64}
-                onChange={(e) => update(r, b, { text: e.target.value })}
-                placeholder={t('textPlaceholder')}
-                aria-label={t('text')}
-                className="min-h-10 min-w-0 rounded-[var(--radius-control)] border border-border-strong bg-surface-2 px-3 text-sm focus:border-accent focus:outline-none"
-              />
+            <div key={b} className="flex flex-col gap-2 sm:flex-row">
+              <div className="flex gap-2 sm:w-2/5">
+                <input
+                  value={btn.text}
+                  maxLength={64}
+                  onChange={(e) => update(r, b, { text: e.target.value })}
+                  placeholder={t('textPlaceholder')}
+                  aria-label={t('text')}
+                  className="min-h-10 min-w-0 flex-1 rounded-[var(--radius-control)] border border-border-strong bg-surface-2 px-3 text-sm focus:border-accent focus:outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={() => remove(r, b)}
+                  aria-label={t('remove')}
+                  className="min-h-10 w-10 shrink-0 rounded-[var(--radius-control)] text-lg text-text-faint hover:text-text sm:order-last"
+                >
+                  ×
+                </button>
+              </div>
               <input
                 value={btn.url}
                 type="url"
                 inputMode="url"
                 onChange={(e) => update(r, b, { url: e.target.value })}
                 aria-label={t('url')}
-                className="col-span-2 min-h-10 min-w-0 rounded-[var(--radius-control)] border border-border-strong bg-surface-2 px-3 text-sm focus:border-accent focus:outline-none sm:col-span-1"
+                className="min-h-10 min-w-0 flex-1 rounded-[var(--radius-control)] border border-border-strong bg-surface-2 px-3 text-sm focus:border-accent focus:outline-none"
               />
-              <button
-                type="button"
-                onClick={() => remove(r, b)}
-                aria-label={t('remove')}
-                className="row-start-1 min-h-10 px-2 text-text-faint hover:text-text sm:row-auto"
-              >
-                ×
-              </button>
             </div>
           ))}
           {row.length < 8 && (

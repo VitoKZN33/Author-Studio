@@ -240,7 +240,7 @@ export function CalendarScreen() {
       </div>
 
       <section className="flex flex-col gap-2">
-        <h2 className="text-sm font-medium text-text-muted">
+        <h2 className="text-sm font-medium text-text-muted first-letter:uppercase">
           {format.dateTime(new Date(`${selected}T12:00:00Z`), {
             day: 'numeric',
             month: 'long',
