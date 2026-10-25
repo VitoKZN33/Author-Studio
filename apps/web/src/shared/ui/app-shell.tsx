@@ -54,7 +54,7 @@ export function AppShell({ active, children }: { active: SectionKey; children: R
           .map((item) => (
             <NavItem
               key={item.key}
-              item={item}
+              item={{ ...item, label: t(`navShort.${item.key}`) }}
               active={item.key === active}
               variant="tab"
               soon=""

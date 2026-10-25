@@ -20,6 +20,6 @@ export const MOBILE_TABS: readonly SectionKey[] = [
   'overview',
   'posts',
   'calendar',
-  'channels',
+  'analytics',
   'settings',
 ];
