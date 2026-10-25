@@ -47,3 +47,29 @@ jobs:
         run: cp .env.example .env && docker compose config -q
       - name: Аудит зависимостей
         run: pnpm audit --prod --audit-level high
+
+  docker:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - name: Тестовая конфигурация
+        run: |
+          cp .env.example .env
+          sed -i "s/^PUBLIC_DOMAIN=.*/PUBLIC_DOMAIN=localhost/" .env
+          sed -i "s/^POSTGRES_PASSWORD=.*/POSTGRES_PASSWORD=$(openssl rand -hex 24)/" .env
+          sed -i "s|^APP_ENCRYPTION_KEY=.*|APP_ENCRYPTION_KEY=$(openssl rand -base64 32)|" .env
+      - name: Сборка образов
+        run: docker compose build
+      - name: Запуск всех сервисов
+        run: docker compose up -d --wait --wait-timeout 180
+      - name: Состояние приложения
+        run: ./scripts/status.sh
+      - name: Mini App и API через Caddy (HTTPS)
+        run: |
+          curl -fsSk https://localhost/ | grep -q 'lang="ru"'
+          curl -fsSk https://localhost/api/health/ready
+      - name: Миграции идемпотентны при перезапуске
+        run: docker compose up -d --wait --wait-timeout 120 && docker compose logs migrate | grep -q 'Миграции применены'
+      - name: Логи при ошибке
+        if: failure()
+        run: docker compose logs --tail=200
