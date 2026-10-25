@@ -63,10 +63,15 @@ export function buildDigest(input: {
   push('Вышли (по событиям Telegram)', o.leavesTotal, 'telegram');
   push('Постов за период', posts.length, 'system');
   push('Постов с данными о реакциях', withReactions.length, 'telegram');
-  push('Постов с введёнными просмотрами', withViews.length, 'manual');
+  const viewsManual = withViews.length > 0 && withViews.every((p) => p.views!.source === 'manual');
+  push('Постов с данными о просмотрах', withViews.length, viewsManual ? 'manual' : 'telegram');
   push('Среднее реакций на пост', avg(withReactions.map((p) => p.reactions!.value)), 'calc');
-  push('Средние просмотры (введены вручную)', avg(withViews.map((p) => p.views!.value)), 'calc');
-  push('Средний ERR, %', avg(errs), 'calc');
+  push(
+    viewsManual ? 'Средние просмотры (введены вручную)' : 'Средние просмотры',
+    avg(withViews.map((p) => p.views!.value)),
+    'calc',
+  );
+  push('Средний ERR (просмотры / подписчики сейчас), %', avg(errs), 'calc');
   const top = [...withReactions].sort((a, b) => b.reactions!.value - a.reactions!.value)[0];
   if (top)
     push(
@@ -85,7 +90,7 @@ export function buildDigest(input: {
   const reasons: string[] = [];
   if (posts.length < 5) reasons.push(`постов за период: ${posts.length} (нужно хотя бы 5)`);
   if (measuredDays < 7) reasons.push(`дней с измерением подписчиков: ${measuredDays} из ${days}`);
-  if (withViews.length === 0) reasons.push('просмотры не введены ни для одного поста');
+  if (withViews.length === 0) reasons.push('нет данных о просмотрах ни для одного поста');
   else if (withViews.length < posts.length / 2)
     reasons.push(`просмотры есть у ${withViews.length} из ${posts.length} постов`);
   if (o.joinsTotal === null) reasons.push('Telegram не присылал события вступлений/выходов');

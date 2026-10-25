@@ -265,7 +265,8 @@ export class AnalyticsService {
         views,
         forwards,
         subscribersAtPost: subs,
-        err: engagementRate(views?.value ?? null, subs),
+        // ERR — от текущего числа подписчиков (как охват в отчёте, ADR-037).
+        err: engagementRate(views?.value ?? null, snaps.at(-1)?.value ?? subs),
         change24h: windowChange(snaps, primary.postedAt, 24, now),
       };
     });

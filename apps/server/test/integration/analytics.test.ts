@@ -292,7 +292,7 @@ describe('обновления Telegram → аналитика', () => {
 });
 
 describe('показатели постов и ручной ввод', () => {
-  it('ручные просмотры → ERR от подписчиков на момент поста; источник «вручную»', async () => {
+  it('ручные просмотры → ERR от текущего числа подписчиков; источник «вручную»', async () => {
     // Ближайшее измерение до поста (за 2 ч до него); более старые не используются.
     await db().query(
       "insert into channel_metric_snapshots (channel_id, metric, value, source, measured_at) values ($1, 'subscribers', 94, 'telegram_api', now() - interval '3 hours')",
@@ -313,7 +313,13 @@ describe('показатели постов и ручной ввод', () => {
     expect(post.forwards.value).toBe(2);
     expect(post.reactions).toMatchObject({ value: 10, source: 'telegram_api' });
     expect(post.subscribersAtPost).toBe(94);
-    expect(post.err).toBe(47.9);
+    const latest = (
+      await db().query(
+        "select value from channel_metric_snapshots where channel_id = $1 and metric = 'subscribers' order by measured_at desc limit 1",
+        [channelId],
+      )
+    ).rows[0].value as number;
+    expect(post.err).toBe(Math.round((45 / latest) * 1000) / 10);
     expect(r.body.items[0].primaryMessageId).toBe(501); // сортировка по просмотрам
   });
 
