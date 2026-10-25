@@ -180,7 +180,7 @@ function ActionButton({
       aria-busy={busy || undefined}
       className={`min-h-10 rounded-[var(--radius-control)] px-3.5 text-sm disabled:opacity-50 ${
         primary
-          ? 'bg-accent font-medium text-bg'
+          ? 'bg-accent font-medium text-on-accent'
           : 'border border-border-strong text-text-muted hover:text-text'
       }`}
     >

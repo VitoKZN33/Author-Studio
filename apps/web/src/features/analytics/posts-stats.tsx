@@ -21,12 +21,12 @@ export function PostsStats({ channelId, items, timezone, sort, onSort, onChanged
   return (
     <section className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-sm font-medium">{t('title')}</h2>
+        <h2 className="text-[15px] font-bold">{t('title')}</h2>
         <select
           value={sort}
           onChange={(e) => onSort(e.target.value as Props['sort'])}
           aria-label={t('sort')}
-          className="min-h-9 rounded-[var(--radius-control)] border border-border-strong bg-surface-2 px-2 text-sm"
+          className="min-h-9 rounded-full border border-border bg-surface px-3 text-sm font-semibold"
         >
           {(['date', 'reactions', 'views'] as const).map((s) => (
             <option key={s} value={s}>
@@ -123,7 +123,7 @@ function PostCard({
   return (
     <li className="rounded-[var(--radius-card)] border border-border bg-surface px-4 py-3">
       <div className="flex items-start justify-between gap-3">
-        <p className="min-w-0 truncate text-[15px]">{p.summary}</p>
+        <p className="min-w-0 truncate text-[15px] font-semibold">{p.summary}</p>
         <span className="shrink-0 text-xs text-text-faint">{when(p.postedAt)}</span>
       </div>
       <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-4">
@@ -164,7 +164,7 @@ function PostCard({
               inputMode="numeric"
               value={views}
               onChange={(e) => setViews(e.target.value.replace(/\D/g, ''))}
-              className="min-h-10 w-28 rounded-[var(--radius-control)] border border-border-strong bg-surface-2 px-3 text-sm text-text"
+              className="min-h-10 w-28 rounded-[var(--radius-control)] border border-border bg-surface px-3 text-sm text-text"
             />
           </label>
           <label className="flex flex-col gap-1 text-xs text-text-muted">
@@ -173,13 +173,13 @@ function PostCard({
               inputMode="numeric"
               value={forwards}
               onChange={(e) => setForwards(e.target.value.replace(/\D/g, ''))}
-              className="min-h-10 w-28 rounded-[var(--radius-control)] border border-border-strong bg-surface-2 px-3 text-sm text-text"
+              className="min-h-10 w-28 rounded-[var(--radius-control)] border border-border bg-surface px-3 text-sm text-text"
             />
           </label>
           <button
             type="submit"
             disabled={busy}
-            className="min-h-10 rounded-[var(--radius-control)] bg-accent px-3.5 text-sm font-medium text-bg disabled:opacity-50"
+            className="min-h-10 rounded-[var(--radius-control)] bg-accent px-3.5 text-sm font-medium text-on-accent disabled:opacity-50"
           >
             {t('save')}
           </button>

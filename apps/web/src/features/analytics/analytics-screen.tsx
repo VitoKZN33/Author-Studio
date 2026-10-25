@@ -1,12 +1,15 @@
 'use client';
 
+import { zonedDayKey } from '@author-studio/shared';
 import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useFormatter, useTranslations } from 'next-intl';
 import { useEffect, useMemo, useState } from 'react';
-import { zonedDayKey } from '@author-studio/shared';
 import { api, ApiError } from '@/shared/api';
 import { haptic } from '@/shared/telegram';
-import type { Channel } from '../channels/types';
+import { btn, PageHeader, Segmented } from '@/shared/ui/kit';
+import { ChannelChip } from '../channels/channel-chip';
+import { useChannels } from '../channels/use-channels';
 import { BestTimeGrid } from './best-time';
 import { MembersChart, SeriesTable, SubscribersChart } from './charts';
 import { PostsStats } from './posts-stats';
@@ -14,38 +17,27 @@ import { signed, type BestTime, type Overview, type PostStats } from './types';
 import { KindLegend, KindTag } from './value-kind';
 
 type Days = 7 | 30 | 90;
+type Tab = 'overview' | 'posts' | 'time';
+const TABS: Tab[] = ['overview', 'posts', 'time'];
 
 export function AnalyticsScreen() {
   const t = useTranslations('analytics');
   const format = useFormatter();
-  const [channels, setChannels] = useState<Channel[] | null>(null);
-  const [channelId, setChannelId] = useState('');
+  const router = useRouter();
+  const params = useSearchParams();
+  const requested = params.get('tab') as Tab | null;
+  const tab: Tab = requested && TABS.includes(requested) ? requested : 'overview';
+  const { channels, selected: channelId, select } = useChannels();
   const [days, setDays] = useState<Days>(30);
   const [overview, setOverview] = useState<Overview | null>(null);
   const [posts, setPosts] = useState<PostStats[]>([]);
-  const [sort, setSort] = useState<'date' | 'reactions' | 'views'>('date');
+  const [sort, setSort] = useState<'date' | 'reactions' | 'views'>('reactions');
   const [best, setBest] = useState<BestTime | null>(null);
   const [metric, setMetric] = useState<'reactions' | 'views'>('reactions');
   const [error, setError] = useState<string | null>(null);
   const [reload, setReload] = useState(0);
   const [tableView, setTableView] = useState(false);
   const [exportState, setExportState] = useState<'idle' | 'busy' | 'sent' | 'error'>('idle');
-
-  useEffect(() => {
-    let cancelled = false;
-    api
-      .get<{ items: Channel[] }>('/channels')
-      .then((r) => {
-        if (cancelled) return;
-        const list = r.items.filter((c) => c.status !== 'detected' && c.status !== 'disconnected');
-        setChannels(list);
-        setChannelId((cur) => cur || list[0]?.id || '');
-      })
-      .catch(() => !cancelled && setChannels([]));
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   useEffect(() => {
     if (!channelId) return;
@@ -91,6 +83,11 @@ export function AnalyticsScreen() {
     return m;
   }, [overview]);
 
+  const errs = posts.map((p) => p.err).filter((x): x is number => x !== null);
+  const avgErr = errs.length
+    ? Math.round((errs.reduce((s, x) => s + x, 0) / errs.length) * 10) / 10
+    : null;
+
   async function exportCsv() {
     setExportState('busy');
     try {
@@ -105,10 +102,10 @@ export function AnalyticsScreen() {
   if (channels && channels.length === 0) {
     return (
       <div className="flex flex-col gap-3">
-        <h1 className="text-xl font-semibold tracking-tight">{t('title')}</h1>
+        <PageHeader title={t('title')} />
         <p className="text-sm text-text-muted">
           {t('noChannels')}{' '}
-          <Link href="/channels/" className="text-accent underline underline-offset-4">
+          <Link href="/channels/" className={btn.link}>
             {t('toChannels')}
           </Link>
         </p>
@@ -126,44 +123,19 @@ export function AnalyticsScreen() {
     });
 
   return (
-    <div className="flex flex-col gap-5">
-      <header className="flex flex-col gap-3">
-        <h1 className="text-xl font-semibold tracking-tight">{t('title')}</h1>
-        <div className="flex flex-wrap gap-2">
-          {channels && channels.length > 1 && (
-            <select
-              value={channelId}
-              onChange={(e) => setChannelId(e.target.value)}
-              aria-label={t('channel')}
-              className="min-h-9 rounded-[var(--radius-control)] border border-border-strong bg-surface-2 px-2 text-sm"
-            >
-              {channels.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.title}
-                </option>
-              ))}
-            </select>
-          )}
-          <div
-            className="grid grid-cols-3 gap-1 rounded-[var(--radius-control)] bg-surface-2 p-1"
-            role="radiogroup"
-            aria-label={t('period')}
-          >
-            {([7, 30, 90] as const).map((d) => (
-              <button
-                key={d}
-                type="button"
-                role="radio"
-                aria-checked={days === d}
-                onClick={() => setDays(d)}
-                className={`min-h-8 rounded-[6px] px-3 text-sm ${days === d ? 'bg-surface text-text' : 'text-text-muted'}`}
-              >
-                {t('days', { d })}
-              </button>
-            ))}
-          </div>
-        </div>
-      </header>
+    <div className="flex flex-col gap-4">
+      <PageHeader
+        title={t('title')}
+        right={
+          channels && <ChannelChip channels={channels} selected={channelId} onSelect={select} />
+        }
+      />
+      <Segmented
+        label={t('sections')}
+        value={tab}
+        onChange={(v) => router.replace(`/analytics/?tab=${v}`)}
+        options={TABS.map((k) => ({ value: k, label: t(`tabs.${k}`) }))}
+      />
 
       {error && (
         <p role="alert" className="text-sm text-danger">
@@ -176,109 +148,107 @@ export function AnalyticsScreen() {
         </p>
       )}
 
-      {overview && (
+      {overview && tab === 'overview' && (
         <>
-          <p className="max-w-prose text-xs leading-relaxed text-text-faint">
-            {since
-              ? t('coverage', { since: dateFmt(since), every: overview.coverage.intervalMinutes })
-              : t('coverageNone')}{' '}
-            {t('limits')}
-          </p>
+          <Segmented
+            label={t('period')}
+            value={days}
+            onChange={setDays}
+            options={([7, 30, 90] as const).map((d) => ({ value: d, label: t('daysLong', { d }) }))}
+          />
 
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <StatCard
-              label={t('cards.current')}
-              value={overview.current ? format.number(overview.current.value) : null}
-              kind="fact"
-              note={
-                overview.current
-                  ? t('cards.measuredAt', {
-                      when: format.relativeTime(new Date(overview.current.measuredAt)),
-                    })
-                  : t('cards.noCurrent')
-              }
-            />
-            <StatCard
-              label={t('cards.change', { d: days })}
-              value={overview.periodChange ? signed(overview.periodChange.delta) : null}
-              kind="measured"
-              note={
-                overview.periodChange
-                  ? t('cards.changeNote', {
-                      from: overview.periodChange.from,
-                      to: overview.periodChange.to,
-                    })
-                  : t('cards.notEnough')
-              }
-            />
-            <StatCard
-              label={t('cards.members')}
-              value={
-                overview.joinsTotal !== null
-                  ? `+${overview.joinsTotal} / −${overview.leavesTotal ?? 0}`
-                  : null
-              }
-              kind="fact"
-              note={overview.joinsTotal !== null ? t('cards.membersNote') : t('cards.noEvents')}
-            />
-          </div>
-
-          <section className="flex flex-col gap-3 rounded-[var(--radius-card)] border border-border bg-surface p-4">
+          <section className="flex flex-col gap-2 rounded-[var(--radius-card)] border border-border bg-surface p-4">
             <div className="flex items-center justify-between gap-2">
-              <h2 className="text-sm font-medium">{t('chart.subscribersTitle')}</h2>
-              <button
-                type="button"
-                onClick={() => setTableView((v) => !v)}
-                className="text-xs text-text-muted underline underline-offset-4"
-              >
-                {tableView ? t('chart.showChart') : t('chart.showTable')}
-              </button>
+              <h2 className="text-[15px] font-bold">{t('chart.subscribersTitle')}</h2>
+              <KindTag kind={overview.current ? 'fact' : 'none'} />
             </div>
+            <div className="flex flex-wrap items-baseline gap-x-3">
+              <b className="text-[40px] leading-none font-extrabold tracking-tight tabular-nums">
+                {overview.current ? format.number(overview.current.value) : '—'}
+              </b>
+              {overview.periodChange && (
+                <span
+                  className={`font-bold ${overview.periodChange.delta > 0 ? 'text-ok' : overview.periodChange.delta < 0 ? 'text-danger' : 'text-text-muted'}`}
+                >
+                  {t('changeFor', { delta: signed(overview.periodChange.delta), d: days })}
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-text-faint">
+              {overview.current
+                ? t('cards.measuredAt', {
+                    when: format.relativeTime(new Date(overview.current.measuredAt)),
+                  })
+                : t('cards.noCurrent')}
+              {!overview.periodChange && overview.current ? `. ${t('cards.notEnough')}` : ''}
+            </p>
             {tableView ? (
               <SeriesTable series={overview.series} />
             ) : (
               <SubscribersChart series={overview.series} postsByDay={postsByDay} />
             )}
-            {!tableView && <p className="text-xs text-text-faint">{t('chart.markersHint')}</p>}
+            <div className="flex items-start justify-between gap-3">
+              {!tableView && <p className="text-xs text-text-faint">{t('chart.markersHint')}</p>}
+              <button
+                type="button"
+                onClick={() => setTableView((v) => !v)}
+                className="ml-auto shrink-0 text-xs font-semibold text-accent"
+              >
+                {tableView ? t('chart.showChart') : t('chart.showTable')}
+              </button>
+            </div>
           </section>
 
-          {!tableView && overview.series.some((p) => p.joins !== null) && (
+          <div className="grid grid-cols-2 gap-2.5">
+            <Tile
+              kind={overview.joinsTotal !== null ? 'fact' : 'none'}
+              value={
+                overview.joinsTotal !== null
+                  ? `+${overview.joinsTotal} / −${overview.leavesTotal ?? 0}`
+                  : '—'
+              }
+              label={overview.joinsTotal !== null ? t('cards.members') : t('cards.noEventsShort')}
+            />
+            <Tile
+              kind={avgErr !== null ? 'estimate' : 'none'}
+              value={avgErr !== null ? `${String(avgErr).replace('.', ',')}%` : '—'}
+              label={avgErr !== null ? t('cards.avgErr', { n: errs.length }) : t('cards.noErr')}
+            />
+          </div>
+
+          {overview.series.some((p) => p.joins !== null) && (
             <section className="flex flex-col gap-2 rounded-[var(--radius-card)] border border-border bg-surface p-4">
-              <h2 className="text-sm font-medium">{t('chart.membersTitle')}</h2>
+              <h2 className="text-[15px] font-bold">{t('chart.membersTitle')}</h2>
               <MembersChart series={overview.series} />
               <p className="text-xs text-text-faint">{t('chart.membersHint')}</p>
             </section>
           )}
 
-          <KindLegend />
-
-          <PostsStats
-            channelId={channelId}
-            items={posts}
-            timezone={overview.timezone}
-            sort={sort}
-            onSort={setSort}
-            onChanged={() => setReload((n) => n + 1)}
-          />
-
-          {best && <BestTimeGrid data={best} onMetric={setMetric} />}
-
           <Link
             href="/ai/?tab=review"
-            className="flex min-h-12 items-center justify-between rounded-[var(--radius-card)] border border-border bg-surface px-4 text-sm hover:border-border-strong"
+            className="flex items-center justify-between gap-3 rounded-[var(--radius-card)] bg-ink px-4 py-4 text-on-ink"
           >
-            {t('aiReview')}
-            <span aria-hidden className="text-text-faint">
-              ›
+            <span className="min-w-0">
+              <span className="block font-bold">{t('ai.title')}</span>
+              <span className="block text-[13px] opacity-70">{t('ai.text')}</span>
+            </span>
+            <span className="shrink-0 rounded-full bg-accent px-3.5 py-2 text-sm font-bold text-on-accent">
+              {t('ai.action')}
             </span>
           </Link>
 
+          <p className="text-xs leading-relaxed text-text-faint">
+            {since
+              ? t('coverage', { since: dateFmt(since), every: overview.coverage.intervalMinutes })
+              : t('coverageNone')}{' '}
+            {t('limits')}
+          </p>
           <div className="flex flex-col gap-1">
             <button
               type="button"
               onClick={() => void exportCsv()}
               disabled={exportState === 'busy'}
-              className="min-h-10 self-start rounded-[var(--radius-control)] border border-border-strong px-3.5 text-sm text-text-muted hover:text-text disabled:opacity-50"
+              className={`${btn.outline} self-start text-sm`}
             >
               {exportState === 'busy' ? t('export.busy') : t('export.button', { d: days })}
             </button>
@@ -291,29 +261,48 @@ export function AnalyticsScreen() {
           </div>
         </>
       )}
+
+      {overview && tab === 'posts' && (
+        <>
+          <Segmented
+            label={t('period')}
+            value={days}
+            onChange={setDays}
+            options={([7, 30, 90] as const).map((d) => ({ value: d, label: t('daysLong', { d }) }))}
+          />
+          <PostsStats
+            channelId={channelId}
+            items={posts}
+            timezone={overview.timezone}
+            sort={sort}
+            onSort={setSort}
+            onChanged={() => setReload((n) => n + 1)}
+          />
+          <KindLegend />
+        </>
+      )}
+
+      {tab === 'time' && best && <BestTimeGrid data={best} onMetric={setMetric} />}
     </div>
   );
 }
 
-function StatCard({
-  label,
-  value,
+function Tile({
   kind,
-  note,
+  value,
+  label,
 }: {
+  kind: 'fact' | 'estimate' | 'none';
+  value: string;
   label: string;
-  value: string | null;
-  kind: 'fact' | 'measured';
-  note: string;
 }) {
   return (
-    <div className="flex flex-col gap-1 rounded-[var(--radius-card)] border border-border bg-surface px-4 py-3">
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-xs text-text-muted">{label}</span>
-        <KindTag kind={value === null ? 'none' : kind} />
-      </div>
-      <span className="text-2xl font-semibold tracking-tight tabular-nums">{value ?? '—'}</span>
-      <span className="text-xs text-text-faint">{note}</span>
+    <div className="flex flex-col items-start gap-1.5 rounded-[var(--radius-card)] border border-border bg-surface p-3.5">
+      <KindTag kind={kind} />
+      <b className="text-[22px] leading-tight font-extrabold tracking-tight tabular-nums">
+        {value}
+      </b>
+      <span className="text-[12px] leading-snug text-text-faint">{label}</span>
     </div>
   );
 }

@@ -5,9 +5,10 @@ import { useState, type PointerEvent } from 'react';
 import { signed, type DayPoint } from './types';
 import { useWidth } from './use-width';
 
-const LINE = '#3987e5';
-const JOIN = '#3987e5';
-const LEAVE = '#e66767';
+/** Цвета серий проверены валидатором палитры (светлая и тёмная тема, дальтонизм). */
+const LINE = 'var(--chart-1)';
+const JOIN = 'var(--chart-1)';
+const LEAVE = 'var(--chart-2)';
 const GRID = 'var(--color-border)';
 const H = 200;
 const PAD = { top: 14, right: 12, bottom: 26, left: 46 };
@@ -356,7 +357,7 @@ function Tooltip({ x, width, children }: { x: number; width: number; children: R
   const left = Math.min(Math.max(x - 90, 4), width - 184);
   return (
     <div
-      className="pointer-events-none absolute top-0 w-[180px] rounded-[var(--radius-control)] border border-border-strong bg-surface-2 px-2.5 py-2 text-xs leading-relaxed shadow-lg"
+      className="pointer-events-none absolute top-0 w-[180px] rounded-[var(--radius-control)] border border-border bg-surface px-2.5 py-2 text-xs leading-relaxed shadow-lg"
       style={{ left }}
     >
       {children}

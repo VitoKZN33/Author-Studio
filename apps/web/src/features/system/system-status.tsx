@@ -46,12 +46,12 @@ export function SystemStatus() {
   return (
     <section className="rounded-[var(--radius-card)] border border-border bg-surface">
       <header className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
-        <h2 className="text-sm font-medium">{t('title')}</h2>
+        <h2 className="text-[15px] font-bold">{t('title')}</h2>
         <button
           type="button"
           onClick={refresh}
           disabled={state.kind === 'loading'}
-          className="min-h-9 rounded-[var(--radius-control)] border border-border-strong px-3 text-xs text-text-muted hover:text-text disabled:opacity-50"
+          className="min-h-9 rounded-full border border-border px-3 text-xs font-semibold disabled:opacity-50"
         >
           {state.kind === 'loading' ? t('checking') : t('refresh')}
         </button>

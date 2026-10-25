@@ -47,12 +47,12 @@ export function ConnectForm({ onConnected }: { onConnected: (c: Channel) => void
           enterKeyHint="go"
           aria-invalid={error ? true : undefined}
           aria-describedby={error ? 'channel-ref-error' : undefined}
-          className="min-h-11 min-w-0 flex-1 rounded-[var(--radius-control)] border border-border-strong bg-surface-2 px-3 text-[15px] placeholder:text-text-faint focus:border-accent focus:outline-none"
+          className="min-h-11 min-w-0 flex-1 rounded-[var(--radius-control)] border border-border bg-surface px-3 text-[15px] placeholder:text-text-faint focus:border-accent focus:outline-none"
         />
         <button
           type="submit"
           disabled={busy || !value.trim()}
-          className="min-h-11 shrink-0 rounded-[var(--radius-control)] bg-accent px-4 text-sm font-medium text-bg disabled:opacity-40"
+          className="min-h-11 shrink-0 rounded-[var(--radius-control)] bg-accent px-4 text-sm font-medium text-on-accent disabled:opacity-40"
         >
           {busy ? t('busy') : t('submit')}
         </button>

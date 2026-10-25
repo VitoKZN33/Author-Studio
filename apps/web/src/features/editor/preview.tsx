@@ -73,10 +73,13 @@ export function PostPreview({
   content,
   media,
   channelTitle,
+  compact = false,
 }: {
   content: PostContent;
   media: MediaView[];
   channelTitle: string;
+  /** Уменьшенный вид (в окне публикации): медиа ниже, текст — до 4 строк. */
+  compact?: boolean;
 }) {
   const t = useTranslations('editor.preview');
   const byId = new Map(media.map((m) => [m.id, m]));
@@ -85,7 +88,7 @@ export function PostPreview({
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="rounded-[var(--radius-card)] bg-[#17212b] p-3">
+      <div className="rounded-[var(--radius-card)] bg-[#0e1621] p-3">
         <div className="max-w-[420px] overflow-hidden rounded-2xl rounded-bl-md bg-[#182533] shadow-sm">
           {items.length > 0 && (
             <div
@@ -95,7 +98,13 @@ export function PostPreview({
                 <MediaThumb
                   key={m.id}
                   media={m}
-                  className={items.length === 1 ? 'max-h-80 w-full' : 'aspect-square w-full'}
+                  className={
+                    items.length === 1
+                      ? compact
+                        ? 'max-h-40 w-full'
+                        : 'max-h-80 w-full'
+                      : 'aspect-square w-full'
+                  }
                 />
               ))}
             </div>
@@ -103,7 +112,9 @@ export function PostPreview({
           <div className="px-3 pt-2 pb-1.5">
             <div className="text-[13px] font-medium text-[#71baf7]">{channelTitle}</div>
             {content.text && (
-              <p className="mt-0.5 text-[15px] leading-snug break-words whitespace-pre-wrap text-[#f5f5f5]">
+              <p
+                className={`mt-0.5 text-[15px] leading-snug break-words whitespace-pre-wrap text-[#f5f5f5] ${compact ? 'line-clamp-4' : ''}`}
+              >
                 {renderEntities(content.text, content.entities)}
               </p>
             )}
@@ -126,7 +137,7 @@ export function PostPreview({
           </div>
         )}
       </div>
-      <p className="text-xs text-text-faint">{t('approximate')}</p>
+      {!compact && <p className="text-xs text-text-faint">{t('approximate')}</p>}
     </div>
   );
 }

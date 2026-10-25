@@ -95,9 +95,24 @@ export class PostsService {
       ownerId,
       rows.map((r) => r.id),
     );
+    // Обложка для списка — первый медиафайл поста (миниатюра: GET /media/:id/thumb).
+    const covers = new Map(
+      (
+        await this.media.findMany(
+          ownerId,
+          rows.flatMap((r) => (r.content.media[0] ? [r.content.media[0].assetId] : [])),
+        )
+      ).map((m) => [m.id, m.kind]),
+    );
     return rows.map((r) => ({
       id: r.id,
       summary: summarizeContent(r.content),
+      excerpt: r.content.text.slice(0, 280),
+      cover: (() => {
+        const first = r.content.media[0]?.assetId;
+        const kind = first ? covers.get(first) : undefined;
+        return first && kind ? { id: first, kind } : null;
+      })(),
       mediaCount: r.content.media.length,
       version: r.version,
       updatedAt: r.updatedAt.toISOString(),

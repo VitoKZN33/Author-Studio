@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Controller,
   Get,
+  NotFoundException,
   Param,
   ParseUUIDPipe,
   Post,
@@ -45,6 +46,24 @@ export class MediaController {
   async upload(@Req() req: AuthenticatedRequest, @UploadedFile() file?: Express.Multer.File) {
     if (!file) throw new BadRequestException('Файл не получен (поле file)');
     return this.media.accept(req.auth.userId, file.path, file.originalname, file.size);
+  }
+
+  @Get(':id/thumb')
+  @ApiOperation({ summary: 'Миниатюра фото для списков (WebP); для видео — 404' })
+  async thumb(
+    @Req() req: AuthenticatedRequest,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<StreamableFile> {
+    const row = await this.media.getOwned(req.auth.userId, id);
+    const file = await this.media.thumbnail(row);
+    if (!file) throw new NotFoundException('Миниатюры нет');
+    res.setHeader('Cache-Control', 'private, max-age=604800');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    return new StreamableFile(createReadStream(file), {
+      type: 'image/webp',
+      disposition: 'inline',
+    });
   }
 
   @Get(':id')

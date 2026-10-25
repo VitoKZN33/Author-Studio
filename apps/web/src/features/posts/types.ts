@@ -39,6 +39,9 @@ export interface PostView {
 export interface PostListItem {
   id: string;
   summary: string;
+  /** Начало текста — для постов без картинки. */
+  excerpt: string;
+  cover: { id: string; kind: 'photo' | 'video' } | null;
   mediaCount: number;
   version: number;
   updatedAt: string;
@@ -81,4 +84,22 @@ export function postLink(
 ): string | null {
   const id = p.messageIds?.[0];
   return p.channelUsername && id ? `https://t.me/${p.channelUsername}/${id}` : null;
+}
+
+/** Ближайшая или последняя отправка поста — для подписи на карточке. */
+export function headlinePublication(
+  item: Pick<PostListItem, 'publications'>,
+): PublicationView | null {
+  const live = item.publications.filter((p) => p.status !== 'cancelled');
+  const problem = live.find((p) => p.status === 'failed' || p.status === 'ambiguous');
+  if (problem) return problem;
+  const scheduled = live
+    .filter((p) => p.status === 'scheduled' || p.status === 'sending')
+    .sort((a, b) => a.scheduledAt.localeCompare(b.scheduledAt))[0];
+  if (scheduled) return scheduled;
+  return (
+    live
+      .filter((p) => p.status === 'published')
+      .sort((a, b) => (b.publishedAt ?? '').localeCompare(a.publishedAt ?? ''))[0] ?? null
+  );
 }

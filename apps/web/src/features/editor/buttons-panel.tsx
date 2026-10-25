@@ -28,7 +28,7 @@ export function ButtonsPanel({ rows, onChange, disabledReason }: Props) {
   return (
     <section className="flex flex-col gap-2">
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-medium text-text-muted">{t('title')}</h2>
+        <h2 className="sr-only">{t('title')}</h2>
         <button
           type="button"
           disabled={!!disabledReason}
@@ -53,7 +53,7 @@ export function ButtonsPanel({ rows, onChange, disabledReason }: Props) {
                   onChange={(e) => update(r, b, { text: e.target.value })}
                   placeholder={t('textPlaceholder')}
                   aria-label={t('text')}
-                  className="min-h-10 min-w-0 flex-1 rounded-[var(--radius-control)] border border-border-strong bg-surface-2 px-3 text-sm focus:border-accent focus:outline-none"
+                  className="min-h-10 min-w-0 flex-1 rounded-[var(--radius-control)] border border-border bg-surface px-3 text-sm focus:border-accent focus:outline-none"
                 />
                 <button
                   type="button"
@@ -70,7 +70,7 @@ export function ButtonsPanel({ rows, onChange, disabledReason }: Props) {
                 inputMode="url"
                 onChange={(e) => update(r, b, { url: e.target.value })}
                 aria-label={t('url')}
-                className="min-h-10 min-w-0 flex-1 rounded-[var(--radius-control)] border border-border-strong bg-surface-2 px-3 text-sm focus:border-accent focus:outline-none"
+                className="min-h-10 min-w-0 flex-1 rounded-[var(--radius-control)] border border-border bg-surface px-3 text-sm focus:border-accent focus:outline-none"
               />
             </div>
           ))}

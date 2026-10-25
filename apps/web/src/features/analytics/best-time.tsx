@@ -1,7 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { heatColor, heatText, type BestTime } from './types';
+import { heatColor, heatIndex, heatText, type BestTime } from './types';
 
 const SLOTS = ['0–3', '3–6', '6–9', '9–12', '12–15', '15–18', '18–21', '21–24'];
 
@@ -21,12 +21,12 @@ export function BestTimeGrid({
   return (
     <section className="flex flex-col gap-3 rounded-[var(--radius-card)] border border-border bg-surface p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-sm font-medium">{t('title')}</h2>
+        <h2 className="text-[15px] font-bold">{t('title')}</h2>
         <select
           value={data.metric}
           onChange={(e) => onMetric(e.target.value as 'reactions' | 'views')}
           aria-label={t('metric')}
-          className="min-h-9 rounded-[var(--radius-control)] border border-border-strong bg-surface-2 px-2 text-sm"
+          className="min-h-9 rounded-full border border-border bg-surface px-3 text-sm font-semibold"
         >
           <option value="reactions">{t('byReactions')}</option>
           <option value="views">{t('byViews')}</option>
@@ -49,14 +49,14 @@ export function BestTimeGrid({
         <p className="text-xs text-text-faint">{t(`confidence.${data.confidence}`)}</p>
       )}
 
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[420px] border-separate border-spacing-0.5 text-[11px]">
+      <div>
+        <table className="w-full table-fixed border-separate border-spacing-[3px] text-[11px]">
           <thead>
             <tr>
               <th className="w-8" />
               {SLOTS.map((s) => (
-                <th key={s} className="pb-1 font-normal text-text-faint">
-                  {s}
+                <th key={s} className="pb-1 font-normal text-text-faint" title={s}>
+                  {s.split('–')[0]}
                 </th>
               ))}
             </tr>
@@ -68,15 +68,15 @@ export function BestTimeGrid({
                 {SLOTS.map((_, s) => {
                   const c = cell(w, s);
                   const isBest = data.best && data.best.weekday === w && data.best.slot === s;
-                  const bg = c.n ? heatColor(c.avg ?? 0, max) : null;
+                  const step = c.n ? heatIndex(c.avg ?? 0, max) : null;
                   return (
                     <td
                       key={s}
                       title={c.n ? t('cellTitle', { avg: c.avg ?? 0, n: c.n }) : t('cellEmpty')}
-                      className={`h-8 rounded text-center font-semibold tabular-nums ${isBest ? 'outline outline-2 outline-text' : ''}`}
+                      className={`h-8 rounded-[6px] text-center font-semibold tabular-nums ${isBest ? 'outline-2 outline-offset-1 outline-ink' : ''}`}
                       style={{
-                        background: bg ?? 'var(--color-surface-2)',
-                        color: bg ? heatText(bg) : 'var(--color-text-faint)',
+                        background: step !== null ? heatColor(step) : 'var(--color-surface-2)',
+                        color: step !== null ? heatText(step) : 'var(--color-text-faint)',
                       }}
                     >
                       {c.n ? c.n : ''}

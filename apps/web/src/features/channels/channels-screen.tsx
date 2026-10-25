@@ -1,5 +1,6 @@
 'use client';
 
+import { PageHeader } from '@/shared/ui/kit';
 import { useTranslations } from 'next-intl';
 import { useEffect, useState } from 'react';
 import { api, ApiError } from '@/shared/api';
@@ -50,11 +51,11 @@ export function ChannelsScreen() {
   const empty = groups !== null && load.kind === 'ready' && load.items.length === 0;
 
   return (
-    <div className="flex flex-col gap-6">
-      <header>
-        <h1 className="text-xl font-semibold tracking-tight">{t('title')}</h1>
-        <p className="mt-1.5 max-w-prose text-sm text-text-muted">{t('intro')}</p>
-      </header>
+    <div className="flex flex-col gap-5">
+      <div className="flex flex-col gap-1.5">
+        <PageHeader title={t('title')} back={{ href: '/more/', label: t('back') }} />
+        <p className="max-w-prose text-sm text-text-muted">{t('intro')}</p>
+      </div>
 
       <ConnectForm onConnected={upsert} />
       <AddBotSteps botUsername={info?.botUsername ?? null} defaultOpen={empty} />
@@ -110,7 +111,7 @@ function Group({
 }) {
   return (
     <section className="flex flex-col gap-3">
-      <h2 className="text-sm font-medium text-text-muted">
+      <h2 className="px-0.5 text-[15px] font-bold">
         {title} <span className="text-text-faint">{items.length}</span>
       </h2>
       {items.map((c) => (

@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@author-studio/shared": "workspace:*",
+    "@fontsource-variable/manrope": "^5.3.0",
     "@tiptap/core": "^3.32.0",
     "@tiptap/pm": "^3.32.0",
     "@tiptap/react": "^3.32.0",

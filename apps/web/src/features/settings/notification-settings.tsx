@@ -39,7 +39,7 @@ export function NotificationSettings() {
 
   return (
     <section className="flex flex-col gap-2">
-      <h2 className="text-sm font-medium text-text-muted">{t('title')}</h2>
+      <h2 className="px-0.5 text-[15px] font-bold">{t('title')}</h2>
       <div className="divide-y divide-border rounded-[var(--radius-card)] border border-border bg-surface">
         {KEYS.map((k) => (
           <label

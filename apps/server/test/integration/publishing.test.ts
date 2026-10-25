@@ -196,6 +196,27 @@ describe('медиафайлы', () => {
     expect(bad.status).toBe(400);
   });
 
+  it('миниатюра: настоящее фото → WebP до 480 px; повреждённое → 404; без сессии → 401', async () => {
+    const { default: sharp } = await import('sharp');
+    const png = await sharp({
+      create: { width: 1200, height: 800, channels: 3, background: '#0e9f8e' },
+    })
+      .png()
+      .toBuffer();
+    const id = (await upload(png, 'big.png')).body.id;
+    const thumb = await fetch(`${base}/api/media/${id}/thumb`, { headers: auth });
+    expect(thumb.status).toBe(200);
+    expect(thumb.headers.get('content-type')).toBe('image/webp');
+    const meta = await sharp(Buffer.from(await thumb.arrayBuffer())).metadata();
+    expect(meta.width).toBeLessThanOrEqual(480);
+    // Повторный запрос — из готового файла.
+    expect((await fetch(`${base}/api/media/${id}/thumb`, { headers: auth })).status).toBe(200);
+    expect((await fetch(`${base}/api/media/${id}/thumb`)).status).toBe(401);
+
+    const broken = (await upload(JPEG, 'broken.jpg')).body.id;
+    expect((await fetch(`${base}/api/media/${broken}/thumb`, { headers: auth })).status).toBe(404);
+  });
+
   it('фото больше 10 МБ → 413', async () => {
     const big = Buffer.concat([
       Buffer.from([0xff, 0xd8, 0xff, 0xe0]),

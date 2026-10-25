@@ -136,7 +136,7 @@ export function PlanTab({ channels }: { channels: Channel[] }) {
       {plan && (
         <section className={card}>
           <div className="flex items-baseline justify-between gap-2">
-            <h2 className="text-sm font-medium">{t('result', { n: plan.items.length })}</h2>
+            <h2 className="text-[15px] font-bold">{t('result', { n: plan.items.length })}</h2>
             {plan.rejected > 0 && (
               <span className="text-xs text-text-faint">{t('rejected', { n: plan.rejected })}</span>
             )}

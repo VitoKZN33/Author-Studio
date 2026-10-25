@@ -19,7 +19,7 @@ export function PublicationsList({ items, timezone, onChange }: Props) {
   if (items.length === 0) return null;
   return (
     <section className="flex flex-col gap-2">
-      <h2 className="text-sm font-medium text-text-muted">{t('title')}</h2>
+      <h2 className="px-0.5 text-[15px] font-bold">{t('title')}</h2>
       {items.map((p) => (
         <PublicationRow key={p.id} p={p} timezone={timezone} onChange={onChange} />
       ))}
@@ -101,7 +101,7 @@ function PublicationRow({
             min={utcToZonedWallTime(new Date(), timezone)}
             onChange={(e) => setWhen(e.target.value)}
             aria-label={t('newTime')}
-            className="min-h-10 min-w-0 flex-1 rounded-[var(--radius-control)] border border-border-strong bg-surface-2 px-3 text-sm [color-scheme:dark]"
+            className="min-h-10 min-w-0 flex-1 rounded-[var(--radius-control)] border border-border bg-surface px-3 text-sm"
           />
           <Btn
             primary
@@ -188,7 +188,7 @@ function Btn({
       disabled={disabled}
       className={`min-h-10 rounded-[var(--radius-control)] px-3.5 text-sm disabled:opacity-50 ${
         primary
-          ? 'bg-accent font-medium text-bg'
+          ? 'bg-accent font-medium text-on-accent'
           : 'border border-border-strong text-text-muted hover:text-text'
       }`}
     >

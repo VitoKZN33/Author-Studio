@@ -59,7 +59,7 @@ export function RichEditor({ initial, onChange, placeholder }: Props) {
   });
 
   return (
-    <div className="rounded-[var(--radius-card)] border border-border bg-surface focus-within:border-border-strong">
+    <div>
       {editor && <Toolbar editor={editor} />}
       <div className="relative">
         <EditorContent editor={editor} />
@@ -116,7 +116,7 @@ function Toolbar({ editor }: { editor: Editor }) {
       aria-label={t(key)}
       title={t(key)}
       className={`grid h-9 min-w-9 place-items-center rounded-[var(--radius-control)] px-2 text-sm ${
-        active ? 'bg-surface-2 text-text' : 'text-text-muted hover:text-text'
+        active ? 'bg-accent-soft text-accent' : 'text-text-muted hover:text-text'
       }`}
     >
       {label}
@@ -169,11 +169,11 @@ function Toolbar({ editor }: { editor: Editor }) {
             value={url}
             onChange={(e) => setUrl(e.target.value)}
             aria-label={t('linkUrl')}
-            className="min-h-10 min-w-0 flex-1 rounded-[var(--radius-control)] border border-border-strong bg-surface-2 px-3 text-sm focus:border-accent focus:outline-none"
+            className="min-h-10 min-w-0 flex-1 rounded-[var(--radius-control)] border border-border bg-surface px-3 text-sm focus:border-accent focus:outline-none"
           />
           <button
             type="submit"
-            className="min-h-10 rounded-[var(--radius-control)] bg-accent px-3 text-sm font-medium text-bg"
+            className="min-h-10 rounded-[var(--radius-control)] bg-accent px-3 text-sm font-medium text-on-accent"
           >
             {t('linkApply')}
           </button>

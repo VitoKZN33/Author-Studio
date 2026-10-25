@@ -2,15 +2,12 @@
 
 import type { ReactNode } from 'react';
 import { ApiError } from '@/shared/api';
+import { btn, card as kitCard, inputCls } from '@/shared/ui/kit';
 
-export const card =
-  'flex flex-col gap-3 rounded-[var(--radius-card)] border border-border bg-surface p-4';
-export const input =
-  'min-h-10 w-full rounded-[var(--radius-control)] border border-border-strong bg-surface-2 px-3 text-sm';
-export const primaryBtn =
-  'min-h-10 rounded-[var(--radius-control)] bg-accent px-4 text-sm font-medium text-bg disabled:opacity-50';
-export const secondaryBtn =
-  'min-h-10 rounded-[var(--radius-control)] border border-border-strong px-3.5 text-sm text-text-muted hover:text-text disabled:opacity-50';
+export const card = `${kitCard} flex flex-col gap-3 p-4`;
+export const input = inputCls;
+export const primaryBtn = btn.primary;
+export const secondaryBtn = btn.outline;
 
 export function errorText(e: unknown, fallback: string): string {
   if (!(e instanceof ApiError)) return fallback;
@@ -49,7 +46,7 @@ export function Alert({
       className={
         tone === 'danger'
           ? 'text-sm text-danger'
-          : 'rounded-[var(--radius-control)] bg-warn-soft px-3 py-2 text-sm text-warn'
+          : 'rounded-[12px] bg-warn-soft px-3 py-2 text-sm text-warn'
       }
     >
       {children}

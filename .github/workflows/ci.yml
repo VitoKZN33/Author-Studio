@@ -72,6 +72,8 @@ jobs:
         run: ./scripts/backup.sh && ls -l backups
       - name: Том медиафайлов доступен процессу api на запись
         run: docker compose exec -T api sh -c 'touch /var/lib/author-studio/media/.probe && rm /var/lib/author-studio/media/.probe'
+      - name: Миниатюры (sharp) работают в образе Alpine
+        run: docker compose exec -T api node -e "import('sharp').then(async ({default:s})=>{const b=await s({create:{width:600,height:400,channels:3,background:'#0e9f8e'}}).webp().resize(480).toBuffer();console.log('sharp ok',b.length)})"
       - name: Миграции идемпотентны при перезапуске
         run: docker compose up -d --wait --wait-timeout 120 && docker compose logs migrate | grep -q 'Миграции применены'
       - name: Логи при ошибке

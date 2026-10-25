@@ -6,6 +6,8 @@ import { useState } from 'react';
 import { useSession } from '../session/session';
 import { useSystemInfo } from '../system/use-system-info';
 import { confirmAction } from '@/shared/telegram';
+import { PageHeader } from '@/shared/ui/kit';
+import { SystemStatus } from '../system/system-status';
 import { NotificationSettings } from './notification-settings';
 
 export function SettingsScreen() {
@@ -40,8 +42,8 @@ export function SettingsScreen() {
   ];
 
   return (
-    <div className="flex flex-col gap-6">
-      <h1 className="text-xl font-semibold tracking-tight">{t('title')}</h1>
+    <div className="flex flex-col gap-5">
+      <PageHeader title={t('title')} back={{ href: '/more/', label: t('back') }} />
       <dl className="divide-y divide-border rounded-[var(--radius-card)] border border-border bg-surface">
         {rows.map(([k, v]) => (
           <div key={k} className="flex items-baseline justify-between gap-4 px-4 py-3 text-sm">
@@ -69,6 +71,7 @@ export function SettingsScreen() {
         </span>
       </Link>
       <NotificationSettings />
+      <SystemStatus />
       <div>
         <button
           type="button"

@@ -113,7 +113,7 @@ export function AiSettingsForm({
     <div className="flex flex-col gap-4">
       <section className={card}>
         <div className="flex items-center justify-between gap-3">
-          <h2 className="text-sm font-medium">{t('connection')}</h2>
+          <h2 className="text-[15px] font-bold">{t('connection')}</h2>
           <StatusTag status={settings.status} />
         </div>
         {settings.lastError && settings.status === 'error' && <Alert>{settings.lastError}</Alert>}
@@ -207,7 +207,7 @@ export function AiSettingsForm({
       </section>
 
       <section className={card}>
-        <h2 className="text-sm font-medium">{t('style')}</h2>
+        <h2 className="text-[15px] font-bold">{t('style')}</h2>
         <textarea
           className={`${input} min-h-28 py-2`}
           maxLength={3000}
@@ -219,7 +219,7 @@ export function AiSettingsForm({
       </section>
 
       <section className={card}>
-        <h2 className="text-sm font-medium">{t('limits')}</h2>
+        <h2 className="text-[15px] font-bold">{t('limits')}</h2>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field label={t('dailyRequestLimit')}>
             <input
@@ -297,7 +297,7 @@ export function AiSettingsForm({
 
       {usage && (
         <section className={card}>
-          <h2 className="text-sm font-medium">{t('usage.title')}</h2>
+          <h2 className="text-[15px] font-bold">{t('usage.title')}</h2>
           <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
             <dt className="text-text-muted">{t('usage.today')}</dt>
             <dd className="text-right tabular-nums">

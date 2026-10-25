@@ -2,6 +2,7 @@
 
 import { zonedDayKey, zonedWallTimeToUtc } from '@author-studio/shared';
 import Link from 'next/link';
+import { Icon } from '@/shared/ui/icons';
 import { useFormatter, useTranslations } from 'next-intl';
 import { useEffect, useMemo, useState } from 'react';
 import { api, ApiError } from '@/shared/api';
@@ -124,12 +125,19 @@ export function CalendarScreen() {
   const dayItems = byDay.get(selected) ?? [];
 
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col gap-4">
+      <Link
+        href="/posts/"
+        className="-mb-2 flex items-center gap-0.5 text-sm font-semibold text-accent"
+      >
+        <Icon name="back" size={18} />
+        {t('back')}
+      </Link>
       <header className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-xl font-semibold tracking-tight first-letter:uppercase">
+        <h1 className="text-[28px] leading-tight font-extrabold tracking-tight first-letter:uppercase">
           {monthTitle}
         </h1>
-        <div className="flex gap-1">
+        <div className="flex gap-1.5">
           <NavBtn label={t('prev')} onClick={() => shift(-1)}>
             ‹
           </NavBtn>
@@ -139,7 +147,7 @@ export function CalendarScreen() {
               setYm({ y: Number(todayKey.slice(0, 4)), m: Number(todayKey.slice(5, 7)) }),
               setSelected(todayKey)
             )}
-            className="min-h-9 rounded-[var(--radius-control)] border border-border-strong px-3 text-sm text-text-muted"
+            className="min-h-9 rounded-full border border-border bg-surface px-3 text-sm font-semibold"
           >
             {t('today')}
           </button>
@@ -154,7 +162,7 @@ export function CalendarScreen() {
           value={channelId}
           onChange={(e) => setChannelId(e.target.value)}
           aria-label={t('channel')}
-          className="min-h-9 rounded-[var(--radius-control)] border border-border-strong bg-surface-2 px-2 text-sm"
+          className="min-h-9 rounded-full border border-border bg-surface px-3 text-sm font-semibold"
         >
           <option value="">{t('allChannels')}</option>
           {channels.map((c) => (
@@ -167,7 +175,7 @@ export function CalendarScreen() {
           value={status}
           onChange={(e) => setStatus(e.target.value as PublicationStatus | 'all')}
           aria-label={t('status')}
-          className="min-h-9 rounded-[var(--radius-control)] border border-border-strong bg-surface-2 px-2 text-sm"
+          className="min-h-9 rounded-full border border-border bg-surface px-3 text-sm font-semibold"
         >
           {STATUS_FILTERS.map((s) => (
             <option key={s} value={s}>
@@ -184,15 +192,15 @@ export function CalendarScreen() {
         </p>
       )}
 
-      <div className="overflow-hidden rounded-[var(--radius-card)] border border-border">
-        <div className="grid grid-cols-7 bg-surface text-center text-[11px] text-text-faint">
+      <div className="rounded-[var(--radius-card)] border border-border bg-surface p-2">
+        <div className="grid grid-cols-7 text-center text-[11px] font-semibold text-text-faint">
           {weekdays.map((w) => (
             <div key={w} className="py-1.5">
               {w}
             </div>
           ))}
         </div>
-        <div className="grid grid-cols-7 gap-px bg-border">
+        <div className="grid grid-cols-7 gap-1">
           {days.map((d) => {
             const list = byDay.get(d) ?? [];
             const inMonth = Number(d.slice(5, 7)) === ym.m;
@@ -203,10 +211,10 @@ export function CalendarScreen() {
                 onClick={() => setSelected(d)}
                 aria-pressed={selected === d}
                 aria-label={t('dayLabel', { day: Number(d.slice(8)), count: list.length })}
-                className={`flex min-h-14 flex-col items-stretch gap-0.5 p-1 text-left md:min-h-24 ${inMonth ? 'bg-surface' : 'bg-bg'} ${selected === d ? 'outline outline-1 -outline-offset-1 outline-accent' : ''}`}
+                className={`flex min-h-12 flex-col items-center gap-1 rounded-[10px] p-1 md:min-h-24 md:items-stretch md:text-left ${selected === d ? 'bg-accent-soft ring-2 ring-accent ring-inset' : list.length ? 'bg-surface-2' : ''}`}
               >
                 <span
-                  className={`text-xs ${d === todayKey ? 'font-semibold text-accent' : inMonth ? 'text-text-muted' : 'text-text-faint'}`}
+                  className={`grid size-7 place-items-center rounded-full text-[13px] font-semibold ${d === todayKey ? 'bg-ink text-on-ink' : inMonth ? 'text-text' : 'text-text-faint/60'}`}
                 >
                   {Number(d.slice(8))}
                 </span>
@@ -224,7 +232,7 @@ export function CalendarScreen() {
                   )}
                 </span>
                 {list.length > 0 && (
-                  <span className="flex flex-wrap gap-0.5 md:hidden">
+                  <span className="flex flex-wrap justify-center gap-0.5 md:hidden">
                     {list.slice(0, 4).map((p) => (
                       <span
                         key={p.id}
@@ -240,7 +248,7 @@ export function CalendarScreen() {
       </div>
 
       <section className="flex flex-col gap-2">
-        <h2 className="text-sm font-medium text-text-muted first-letter:uppercase">
+        <h2 className="px-0.5 text-[15px] font-bold first-letter:uppercase">
           {format.dateTime(new Date(`${selected}T12:00:00Z`), {
             day: 'numeric',
             month: 'long',
@@ -292,7 +300,7 @@ function NavBtn({
       type="button"
       aria-label={label}
       onClick={onClick}
-      className="grid size-9 place-items-center rounded-[var(--radius-control)] border border-border-strong text-lg text-text-muted"
+      className="grid size-9 place-items-center rounded-full border border-border bg-surface text-lg"
     >
       {children}
     </button>

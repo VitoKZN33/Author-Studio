@@ -66,27 +66,17 @@ export type ValueKind = 'fact' | 'measured' | 'manual' | 'estimate' | 'none';
 
 export const signed = (n: number) => (n > 0 ? `+${n}` : String(n));
 
-/** Ступени последовательной шкалы (один оттенок, проверены для тёмного фона). */
-export const HEAT_STEPS = [
-  '#184f95',
-  '#1c5cab',
-  '#256abf',
-  '#2a78d6',
-  '#3987e5',
-  '#5598e7',
-  '#86b6ef',
-];
+/**
+ * Последовательная шкала (один бирюзовый оттенок, 7 ступеней). Цвета заданы
+ * переменными --heat-0…6 в globals.css отдельно для светлой и тёмной темы:
+ * больше значение — сильнее ступень. Текст поверх — --heat-ink-N (контраст ≥ 4.5:1).
+ */
+export const HEAT_STEPS = 7;
 
-export function heatColor(value: number, max: number): string {
-  if (max <= 0) return HEAT_STEPS[0]!;
-  const i = Math.min(
-    HEAT_STEPS.length - 1,
-    Math.floor((value / max) * (HEAT_STEPS.length - 1) + 0.0001),
-  );
-  return HEAT_STEPS[i]!;
+export function heatIndex(value: number, max: number): number {
+  if (max <= 0) return 0;
+  return Math.min(HEAT_STEPS - 1, Math.floor((value / max) * (HEAT_STEPS - 1) + 0.0001));
 }
 
-/** Цвет текста поверх ступени шкалы: на светлых ступенях — тёмный (контраст ≥ 4.5:1). */
-export function heatText(background: string): string {
-  return HEAT_STEPS.indexOf(background) >= 4 ? '#0e0f11' : '#ffffff';
-}
+export const heatColor = (i: number) => `var(--heat-${i})`;
+export const heatText = (i: number) => `var(--heat-ink-${i})`;

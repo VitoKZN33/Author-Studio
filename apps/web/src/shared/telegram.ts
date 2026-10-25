@@ -1,3 +1,5 @@
+import { applyTheme, themeBackground } from './theme';
+
 /**
  * Обвязка Telegram Mini Apps (официальный скрипт telegram-web-app.js).
  * initDataUnsafe используется только для отображения; доказательство подлинности —
@@ -17,6 +19,7 @@ interface TelegramWebApp {
   showConfirm(message: string, callback: (ok: boolean) => void): void;
   enableClosingConfirmation?(): void;
   disableClosingConfirmation?(): void;
+  onEvent?(event: 'themeChanged', handler: () => void): void;
   HapticFeedback?: { notificationOccurred(type: 'error' | 'success' | 'warning'): void };
 }
 
@@ -37,17 +40,25 @@ export function getInitData(): string | null {
   return data ? data : null;
 }
 
-const BG = '#0e0f11';
+function syncTheme(app: TelegramWebApp): void {
+  applyTheme(app.colorScheme === 'dark' ? 'dark' : 'light');
+  if (app.isVersionAtLeast('6.1')) {
+    const bg = themeBackground();
+    if (bg) {
+      app.setHeaderColor(bg);
+      app.setBackgroundColor(bg);
+    }
+  }
+}
 
 export function prepareTelegramUi(): void {
   const app = getWebApp();
   if (!app) return;
   app.ready();
   app.expand();
-  if (app.isVersionAtLeast('6.1')) {
-    app.setHeaderColor(BG);
-    app.setBackgroundColor(BG);
-  }
+  syncTheme(app);
+  // Пользователь сменил тему Telegram, не закрывая приложение.
+  app.onEvent?.('themeChanged', () => syncTheme(app));
 }
 
 /** Подтверждение действия: нативный диалог Telegram, вне Telegram — браузерный. */

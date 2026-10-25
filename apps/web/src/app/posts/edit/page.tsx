@@ -5,7 +5,7 @@ import { AppShell } from '@/shared/ui/app-shell';
 // Статическая сборка: id публикации передаётся в строке запроса (?id=…).
 export default function EditPostPage() {
   return (
-    <AppShell active="posts">
+    <AppShell active="posts" bare>
       <Suspense>
         <EditorScreen />
       </Suspense>

@@ -3,6 +3,8 @@
 import { useTranslations } from 'next-intl';
 import { useEffect, useRef, useState } from 'react';
 import { ApiError, fetchObjectUrl, uploadFile } from '@/shared/api';
+import { Icon } from '@/shared/ui/icons';
+import { Thumb } from '@/shared/ui/thumb';
 import type { MediaView } from '../posts/types';
 
 const ACCEPT = 'image/jpeg,image/png,image/webp,video/mp4,video/quicktime';
@@ -88,55 +90,43 @@ export function MediaPanel({ items, onChange }: Props) {
   }
 
   return (
-    <section className="flex flex-col gap-2">
-      <div className="flex items-center justify-between">
-        <h2 className="text-sm font-medium text-text-muted">
-          {t('title')} <span className="text-text-faint">{items.length}/10</span>
-        </h2>
-        <button
-          type="button"
-          onClick={() => input.current?.click()}
-          disabled={items.length >= 10}
-          className="min-h-9 rounded-[var(--radius-control)] border border-border-strong px-3 text-sm text-text-muted hover:text-text disabled:opacity-40"
-        >
-          {t('add')}
-        </button>
-        <input
-          ref={input}
-          type="file"
-          accept={ACCEPT}
-          multiple
-          hidden
-          onChange={(e) => void onFiles(e.target.files)}
-        />
-      </div>
-
-      {items.length === 0 && uploads.length === 0 && (
-        <p className="text-sm text-text-faint">{t('empty')}</p>
-      )}
-
-      {items.length > 0 && (
-        <ul className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-          {items.map((m, i) => (
-            <li
-              key={m.id}
-              className="relative overflow-hidden rounded-[var(--radius-control)] border border-border"
+    <section className="flex flex-col gap-2" aria-label={t('title')}>
+      <input
+        ref={input}
+        type="file"
+        accept={ACCEPT}
+        multiple
+        hidden
+        onChange={(e) => void onFiles(e.target.files)}
+      />
+      <ul className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none]">
+        {items.map((m, i) => (
+          <li
+            key={m.id}
+            className="relative size-[84px] shrink-0 overflow-hidden rounded-[14px] bg-surface-2"
+          >
+            {m.kind === 'photo' ? (
+              <Thumb cover={{ id: m.id, kind: 'photo' }} className="size-full" />
+            ) : (
+              <MediaThumb media={m} className="size-full" />
+            )}
+            {m.kind === 'video' && (
+              <span className="absolute bottom-1 left-1 rounded-full bg-black/60 px-1.5 text-[10.5px] font-bold text-white">
+                {t('video')}
+              </span>
+            )}
+            <button
+              type="button"
+              aria-label={t('remove')}
+              onClick={() => onChange(items.filter((x) => x.id !== m.id))}
+              className="absolute top-1 right-1 grid size-6 place-items-center rounded-full bg-black/60 text-white"
             >
-              <MediaThumb media={m} className="aspect-square w-full" />
-              {m.kind === 'video' && (
-                <span className="absolute top-1 left-1 rounded bg-bg/80 px-1.5 text-[11px]">
-                  {t('video')}
-                </span>
-              )}
-              <div className="absolute inset-x-0 bottom-0 flex justify-between bg-bg/80">
+              <Icon name="close" size={14} strokeWidth={2.4} />
+            </button>
+            {items.length > 1 && (
+              <div className="absolute inset-x-1 bottom-1 flex justify-end gap-1">
                 <IconBtn label={t('left')} disabled={i === 0} onClick={() => move(i, -1)}>
                   ‹
-                </IconBtn>
-                <IconBtn
-                  label={t('remove')}
-                  onClick={() => onChange(items.filter((x) => x.id !== m.id))}
-                >
-                  ×
                 </IconBtn>
                 <IconBtn
                   label={t('right')}
@@ -146,41 +136,50 @@ export function MediaPanel({ items, onChange }: Props) {
                   ›
                 </IconBtn>
               </div>
-            </li>
-          ))}
-        </ul>
-      )}
-
-      {uploads.map((u) => (
-        <div
-          key={u.key}
-          className="rounded-[var(--radius-control)] border border-border px-3 py-2 text-sm"
-        >
-          <div className="flex justify-between gap-3">
-            <span className="truncate text-text-muted">{u.name}</span>
+            )}
+          </li>
+        ))}
+        {uploads.map((u) => (
+          <li
+            key={u.key}
+            className="relative grid size-[84px] shrink-0 place-items-center rounded-[14px] bg-surface-2 p-2 text-center text-[11px]"
+          >
             {u.error ? (
               <button
                 type="button"
-                className="text-text-faint"
+                className="text-danger"
+                title={u.error}
                 onClick={() => setUploads((x) => x.filter((y) => y.key !== u.key))}
               >
-                ×
+                {t('failedShort')}
               </button>
             ) : (
-              <span className="text-text-faint">{Math.round(u.share * 100)}%</span>
+              <span className="font-bold text-accent">{Math.round(u.share * 100)}%</span>
             )}
-          </div>
-          {u.error ? (
-            <p role="alert" className="mt-1 text-danger">
-              {u.error}
-            </p>
-          ) : (
-            <div className="mt-1.5 h-1 overflow-hidden rounded bg-surface-2">
-              <div className="h-full bg-accent" style={{ width: `${u.share * 100}%` }} />
-            </div>
-          )}
-        </div>
-      ))}
+          </li>
+        ))}
+        {items.length < 10 && (
+          <li className="shrink-0">
+            <button
+              type="button"
+              onClick={() => input.current?.click()}
+              className="grid size-[84px] place-items-center rounded-[14px] border-[1.5px] border-dashed border-border-strong text-center text-[12px] leading-tight text-text-muted"
+            >
+              <span>
+                <Icon name="plus" size={20} className="mx-auto mb-1" />
+                {t('addShort')}
+              </span>
+            </button>
+          </li>
+        )}
+      </ul>
+      {uploads
+        .filter((u) => u.error)
+        .map((u) => (
+          <p key={u.key} role="alert" className="text-sm text-danger">
+            {u.name}: {u.error}
+          </p>
+        ))}
     </section>
   );
 }
@@ -203,7 +202,7 @@ function IconBtn({
       title={label}
       onClick={onClick}
       disabled={disabled}
-      className="h-8 flex-1 text-lg leading-none disabled:opacity-30"
+      className="grid size-6 place-items-center rounded-full bg-black/60 text-base leading-none text-white disabled:opacity-30"
     >
       {children}
     </button>

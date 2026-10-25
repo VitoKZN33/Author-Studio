@@ -16,6 +16,8 @@ import { confirmAction } from '@/shared/telegram';
 import type { Channel } from '../channels/types';
 import type { MediaView, PostView, PublicationView } from '../posts/types';
 import { EditorAiPanel } from '../ai/editor-ai-panel';
+import { Icon } from '@/shared/ui/icons';
+import { btn, Sheet } from '@/shared/ui/kit';
 import { useSystemInfo } from '../system/use-system-info';
 import { ButtonsPanel } from './buttons-panel';
 import { docToMessage, messageToDoc, type PMNode } from './convert';
@@ -76,7 +78,7 @@ function EditorLoaded({ initial }: { initial: PostView }) {
   const [mediaLib, setMediaLib] = useState<MediaView[]>(initial.media);
   const [publications, setPublications] = useState<PublicationView[]>(initial.publications);
   const [channels, setChannels] = useState<Channel[]>([]);
-  const [tab, setTab] = useState<'edit' | 'preview'>('edit');
+  const [sheet, setSheet] = useState<'preview' | 'publish' | null>(null);
   const autosave = useAutosave(initial.id, initial.version);
 
   useEffect(() => {
@@ -164,14 +166,45 @@ function EditorLoaded({ initial }: { initial: PostView }) {
   }
 
   const channelTitle = channels.find((c) => c.status === 'active')?.title ?? t('preview.channel');
+  const buttonCount = content.buttons.flat().length;
 
   return (
-    <div className="flex flex-col gap-5">
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <Link href="/posts/" className="text-sm text-text-muted hover:text-text">
-          ← {t('back')}
+    <div className="flex flex-col gap-4">
+      <header className="flex items-center justify-between gap-3">
+        <Link
+          href="/posts/"
+          className="-ml-1 flex items-center gap-0.5 text-sm font-semibold text-accent"
+        >
+          <Icon name="back" size={18} />
+          {t('back')}
         </Link>
         <SaveIndicator state={autosave.state} />
+        <details className="relative">
+          <summary
+            aria-label={t('actions.more')}
+            className="grid size-9 cursor-pointer list-none place-items-center rounded-full text-accent [&::-webkit-details-marker]:hidden"
+          >
+            <Icon name="more" />
+          </summary>
+          <div className="absolute right-0 z-20 mt-1 flex w-48 flex-col overflow-hidden rounded-[14px] border border-border bg-surface shadow-lg">
+            <button
+              type="button"
+              onClick={() => void duplicate()}
+              className="px-4 py-3 text-left text-sm hover:bg-surface-2"
+            >
+              {t('duplicate')}
+            </button>
+            {!hasActive && (
+              <button
+                type="button"
+                onClick={() => void remove()}
+                className="px-4 py-3 text-left text-sm text-danger hover:bg-surface-2"
+              >
+                {t('delete')}
+              </button>
+            )}
+          </div>
+        </details>
       </header>
 
       {restored && (
@@ -183,21 +216,21 @@ function EditorLoaded({ initial }: { initial: PostView }) {
       {autosave.conflict && (
         <div
           role="alert"
-          className="flex flex-col gap-2 rounded-[var(--radius-card)] border border-warn/40 bg-warn-soft px-4 py-3 text-sm"
+          className="flex flex-col gap-2 rounded-[var(--radius-card)] bg-warn-soft px-4 py-3 text-sm"
         >
           <p className="text-warn">{t('conflict.text')}</p>
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
               onClick={loadServerVersion}
-              className="min-h-10 rounded-[var(--radius-control)] bg-accent px-3 font-medium text-bg"
+              className={`${btn.primary} min-h-10 text-sm`}
             >
               {t('conflict.loadServer')}
             </button>
             <button
               type="button"
               onClick={autosave.keepMine}
-              className="min-h-10 rounded-[var(--radius-control)] border border-border-strong px-3 text-text-muted"
+              className={`${btn.outline} min-h-10 text-sm`}
             >
               {t('conflict.keepMine')}
             </button>
@@ -205,35 +238,17 @@ function EditorLoaded({ initial }: { initial: PostView }) {
         </div>
       )}
 
-      <div
-        className="grid grid-cols-2 gap-1 rounded-[var(--radius-control)] bg-surface-2 p-1 md:hidden"
-        role="tablist"
-      >
-        {(['edit', 'preview'] as const).map((k) => (
-          <button
-            key={k}
-            type="button"
-            role="tab"
-            aria-selected={tab === k}
-            onClick={() => setTab(k)}
-            className={`min-h-9 rounded-[6px] text-sm ${tab === k ? 'bg-surface text-text' : 'text-text-muted'}`}
-          >
-            {t(`tabs.${k}`)}
-          </button>
-        ))}
-      </div>
-
-      <div className="grid gap-6 md:grid-cols-[minmax(0,1fr)_minmax(0,0.9fr)]">
-        <div className={`flex flex-col gap-5 ${tab === 'edit' ? '' : 'hidden md:flex'}`}>
-          <div className="flex flex-col gap-1.5">
+      <div className="md:grid md:grid-cols-[minmax(0,1fr)_minmax(0,0.85fr)] md:gap-6">
+        <div className="flex flex-col gap-4">
+          <div className="overflow-hidden rounded-[var(--radius-card)] border border-border bg-surface">
             <RichEditor
               key={editorKey}
               initial={doc}
               onChange={onDoc}
               placeholder={t('placeholder')}
             />
-            <div className="flex justify-between text-xs">
-              <label className="flex items-center gap-2 text-text-muted">
+            <div className="flex justify-between gap-3 px-4 pb-3 text-xs">
+              <label className="flex items-center gap-2 text-text-faint">
                 <input
                   type="checkbox"
                   className="size-4 accent-[var(--color-accent)]"
@@ -243,59 +258,101 @@ function EditorLoaded({ initial }: { initial: PostView }) {
                 />
                 {t('noLinkPreview')}
               </label>
-              <span className={content.text.length > limit ? 'text-danger' : 'text-text-faint'}>
+              <span
+                className={
+                  content.text.length > limit ? 'font-bold text-danger' : 'text-text-faint'
+                }
+              >
                 {content.text.length} / {limit}
               </span>
             </div>
           </div>
+          <MediaPanel items={orderedMedia} onChange={onMedia} />
           <EditorAiPanel
             current={{ text: content.text, entities: content.entities }}
             hasMedia={content.media.length > 0}
             onApply={applyText}
           />
-          <MediaPanel items={orderedMedia} onChange={onMedia} />
-          <ButtonsPanel
-            rows={content.buttons}
-            onChange={(rows: UrlButton[][]) => update({ ...content, buttons: rows })}
-            disabledReason={content.media.length > 1 ? t('buttons.albumDisabled') : undefined}
-          />
+          <details
+            className="group rounded-[16px] border border-border bg-surface"
+            open={buttonCount > 0}
+          >
+            <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between px-4 font-semibold [&::-webkit-details-marker]:hidden">
+              {t('buttons.title')}
+              <span className="flex items-center gap-1 text-sm font-medium text-text-faint">
+                {buttonCount
+                  ? t('buttons.summaryCount', { n: buttonCount })
+                  : t('buttons.summaryNone')}
+                <Icon
+                  name="chevron"
+                  size={16}
+                  className="transition-transform group-open:rotate-90"
+                />
+              </span>
+            </summary>
+            <div className="px-4 pb-4">
+              <ButtonsPanel
+                rows={content.buttons}
+                onChange={(rows: UrlButton[][]) => update({ ...content, buttons: rows })}
+                disabledReason={content.media.length > 1 ? t('buttons.albumDisabled') : undefined}
+              />
+            </div>
+          </details>
+          {publications.length > 0 && (
+            <PublicationsList
+              items={publications}
+              timezone={timezone}
+              onChange={(p) => setPublications((ps) => ps.map((x) => (x.id === p.id ? p : x)))}
+            />
+          )}
         </div>
+        <div className="hidden md:block">
+          <div className="sticky top-6">
+            <PostPreview content={content} media={orderedMedia} channelTitle={channelTitle} />
+          </div>
+        </div>
+      </div>
 
-        <div className={`flex flex-col gap-5 ${tab === 'preview' ? '' : 'hidden md:flex'}`}>
-          <PostPreview content={content} media={orderedMedia} channelTitle={channelTitle} />
+      <div className="safe-bottom fixed inset-x-0 bottom-0 z-30 flex gap-2.5 border-t border-border bg-surface/95 px-4 pt-3 backdrop-blur md:left-[248px]">
+        <button
+          type="button"
+          onClick={() => setSheet('preview')}
+          className={`${btn.soft} min-h-12 flex-[0.8] md:hidden`}
+        >
+          {t('actions.preview')}
+        </button>
+        <button
+          type="button"
+          onClick={() => setSheet('publish')}
+          className={`${btn.primary} min-h-12 flex-1`}
+        >
+          {t('actions.publish')}
+        </button>
+      </div>
+
+      <Sheet open={sheet === 'preview'} onClose={() => setSheet(null)} title={t('actions.preview')}>
+        <PostPreview content={content} media={orderedMedia} channelTitle={channelTitle} />
+      </Sheet>
+      <Sheet
+        open={sheet === 'publish'}
+        onClose={() => setSheet(null)}
+        title={t('publish.sheetTitle')}
+      >
+        <div className="flex flex-col gap-3">
+          <PostPreview content={content} media={orderedMedia} channelTitle={channelTitle} compact />
           <PublishPanel
             postId={initial.id}
             channels={channels}
             timezone={timezone}
             problems={problems}
             saveNow={autosave.saveNow}
-            onPublished={(items) => setPublications((ps) => [...ps, ...items])}
+            onPublished={(items) => {
+              setPublications((ps) => [...ps, ...items]);
+              setSheet(null);
+            }}
           />
-          <PublicationsList
-            items={publications}
-            timezone={timezone}
-            onChange={(p) => setPublications((ps) => ps.map((x) => (x.id === p.id ? p : x)))}
-          />
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => void duplicate()}
-              className="min-h-10 rounded-[var(--radius-control)] border border-border-strong px-3.5 text-sm text-text-muted hover:text-text"
-            >
-              {t('duplicate')}
-            </button>
-            {!hasActive && (
-              <button
-                type="button"
-                onClick={() => void remove()}
-                className="min-h-10 rounded-[var(--radius-control)] border border-border-strong px-3.5 text-sm text-danger"
-              >
-                {t('delete')}
-              </button>
-            )}
-          </div>
         </div>
-      </div>
+      </Sheet>
     </div>
   );
 }

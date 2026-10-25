@@ -57,7 +57,7 @@ function PrimaryButton({ onClick, children }: { onClick: () => void; children: R
     <button
       type="button"
       onClick={onClick}
-      className="min-h-11 rounded-[var(--radius-control)] bg-accent px-5 text-sm font-medium text-bg hover:brightness-110"
+      className="min-h-11 rounded-[var(--radius-control)] bg-accent px-5 text-sm font-medium text-on-accent hover:brightness-110"
     >
       {children}
     </button>

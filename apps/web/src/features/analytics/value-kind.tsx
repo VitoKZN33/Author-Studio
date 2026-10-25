@@ -4,18 +4,20 @@ import { useTranslations } from 'next-intl';
 import type { ValueKind } from './types';
 
 const TONE: Record<ValueKind, string> = {
-  fact: 'border-ok/40 text-ok',
-  measured: 'border-accent/40 text-accent',
-  manual: 'border-warn/40 text-warn',
-  estimate: 'border-border-strong text-text-muted',
-  none: 'border-border text-text-faint',
+  fact: 'bg-accent-soft text-accent',
+  measured: 'bg-ok-soft text-ok',
+  manual: 'bg-warn-soft text-warn',
+  estimate: 'bg-surface-2 text-text-muted',
+  none: 'bg-surface-2 text-text-faint',
 };
 
 /** Пометка происхождения значения — текстом, а не только цветом. */
 export function KindTag({ kind }: { kind: ValueKind }) {
   const t = useTranslations('analytics.kind');
   return (
-    <span className={`rounded border px-1.5 py-px text-[10.5px] whitespace-nowrap ${TONE[kind]}`}>
+    <span
+      className={`rounded-full px-2 py-0.5 text-[11px] font-bold whitespace-nowrap ${TONE[kind]}`}
+    >
       {t(kind)}
     </span>
   );

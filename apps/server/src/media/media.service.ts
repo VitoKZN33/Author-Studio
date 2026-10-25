@@ -10,7 +10,7 @@ import { TELEGRAM_LIMITS, type MediaInfo } from '@author-studio/shared';
 import { and, eq, inArray } from 'drizzle-orm';
 import { createHash, randomUUID } from 'node:crypto';
 import { createReadStream } from 'node:fs';
-import { mkdir, open, rename, rm } from 'node:fs/promises';
+import { access, mkdir, open, rename, rm } from 'node:fs/promises';
 import path from 'node:path';
 import { APP_CONFIG, type AppConfig } from '../config/config.module.js';
 import { DB, type Database } from '../database/database.module.js';
@@ -130,6 +130,37 @@ export class MediaService implements OnModuleInit {
 
   static infoMap(rows: MediaRow[]): Map<string, MediaInfo> {
     return new Map(rows.map((r) => [r.id, { kind: r.kind, size: r.size }]));
+  }
+
+  /**
+   * Миниатюра фото для списков (WebP до 480 px), создаётся при первом запросе и
+   * хранится рядом с оригиналом. sharp загружается лениво: если нативная библиотека
+   * недоступна, вернётся null, и интерфейс покажет заглушку вместо падения API.
+   */
+  async thumbnail(row: MediaRow): Promise<string | null> {
+    if (row.kind !== 'photo') return null;
+    const dir = path.join(this.dir, 'thumbs');
+    const file = path.join(dir, `${row.id}.webp`);
+    try {
+      await access(file);
+      return file;
+    } catch {
+      // ещё не создана
+    }
+    try {
+      const { default: sharp } = await import('sharp');
+      await mkdir(dir, { recursive: true });
+      const tmp = `${file}.${randomUUID()}.tmp`;
+      await sharp(this.pathOf(row), { failOn: 'none' })
+        .rotate()
+        .resize(480, 480, { fit: 'cover', withoutEnlargement: true })
+        .webp({ quality: 72 })
+        .toFile(tmp);
+      await rename(tmp, file);
+      return file;
+    } catch {
+      return null;
+    }
   }
 
   async rememberTelegramFileId(id: string, fileId: string): Promise<void> {

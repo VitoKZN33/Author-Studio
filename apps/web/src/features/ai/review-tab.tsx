@@ -88,7 +88,7 @@ export function ReviewTab({ channels }: { channels: Channel[] }) {
       {review && (
         <>
           <section className={card}>
-            <h2 className="text-sm font-medium">
+            <h2 className="text-[15px] font-bold">
               {t('factsTitle', { channel: review.period.channelTitle, d: review.period.days })}
             </h2>
             <p className="text-xs text-text-faint">{t('factsHint')}</p>
@@ -106,7 +106,7 @@ export function ReviewTab({ channels }: { channels: Channel[] }) {
           </section>
 
           <section className={card}>
-            <h2 className="text-sm font-medium">
+            <h2 className="text-[15px] font-bold">
               {t('sufficiency')}: {t(`level.${review.sufficiency.level}`)}
             </h2>
             {review.sufficiency.reasons.length > 0 && (
@@ -120,7 +120,7 @@ export function ReviewTab({ channels }: { channels: Channel[] }) {
 
           {review.ai ? (
             <section className={card}>
-              <h2 className="text-sm font-medium">{t('aiTitle', { model: review.ai.model })}</h2>
+              <h2 className="text-[15px] font-bold">{t('aiTitle', { model: review.ai.model })}</h2>
               {review.ai.unverifiedNumbers.length > 0 && (
                 <Alert tone="warn">
                   {t('unverified', { list: review.ai.unverifiedNumbers.join(', ') })}
