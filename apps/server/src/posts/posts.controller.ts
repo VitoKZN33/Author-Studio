@@ -17,7 +17,23 @@ import type { AuthenticatedRequest } from '../auth/auth.types.js';
 import { ZodValidationPipe } from '../common/zod-validation.pipe.js';
 import { PostsService } from './posts.service.js';
 
-const createSchema = z.object({ content: postContentSchema.optional() });
+const adSchema = z
+  .object({
+    advertiser: z.string().trim().max(300),
+    inn: z
+      .string()
+      .trim()
+      .regex(/^(\d{10}|\d{12})?$/, { error: 'ИНН — 10 или 12 цифр' }),
+    erid: z.string().trim().max(100),
+    noErid: z.boolean(),
+  })
+  .partial()
+  .strict();
+const createSchema = z.object({
+  content: postContentSchema.optional(),
+  kind: z.enum(['regular', 'ad']).default('regular'),
+  ad: adSchema.optional(),
+});
 const saveSchema = z.object({ content: postContentSchema, version: z.number().int().min(1) });
 
 @ApiTags('posts')
@@ -38,7 +54,12 @@ export class PostsController {
     @Req() req: AuthenticatedRequest,
     @Body(new ZodValidationPipe(createSchema)) body: z.infer<typeof createSchema>,
   ) {
-    return this.posts.create(req.auth.userId, body.content ?? EMPTY_POST_CONTENT);
+    return this.posts.create(
+      req.auth.userId,
+      body.content ?? EMPTY_POST_CONTENT,
+      body.kind,
+      body.ad ?? null,
+    );
   }
 
   @Get(':id')
@@ -56,6 +77,16 @@ export class PostsController {
     @Body(new ZodValidationPipe(saveSchema)) body: z.infer<typeof saveSchema>,
   ) {
     return this.posts.save(req.auth.userId, id, body.content, body.version);
+  }
+
+  @Put(':id/ad')
+  @ApiOperation({ summary: 'Данные рекламного поста: рекламодатель, ИНН, ERID' })
+  setAd(
+    @Req() req: AuthenticatedRequest,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body(new ZodValidationPipe(adSchema)) body: z.infer<typeof adSchema>,
+  ) {
+    return this.posts.setAd(req.auth.userId, id, body);
   }
 
   @Post(':id/duplicate')

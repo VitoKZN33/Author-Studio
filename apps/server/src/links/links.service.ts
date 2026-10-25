@@ -4,7 +4,7 @@ import { createHmac, randomBytes } from 'node:crypto';
 import { AuditService } from '../audit/audit.service.js';
 import { APP_CONFIG, type AppConfig } from '../config/config.module.js';
 import { DB, type Database } from '../database/database.module.js';
-import { channels, linkClicks, trackedLinks } from '../database/schema.js';
+import { channels, linkClicks, posts, trackedLinks } from '../database/schema.js';
 
 const ALPHABET = 'abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
@@ -74,6 +74,7 @@ export class LinksService {
         targetUrl: l.targetUrl,
         shortUrl: this.shortUrl(l.slug),
         isAd: l.isAd,
+        postId: l.postId,
         channelId: l.channelId,
         channelTitle,
         createdAt: l.createdAt.toISOString(),
@@ -85,7 +86,13 @@ export class LinksService {
 
   async create(
     ownerId: string,
-    input: { title: string; targetUrl: string; channelId?: string | null; isAd?: boolean },
+    input: {
+      title: string;
+      targetUrl: string;
+      channelId?: string | null;
+      isAd?: boolean;
+      postId?: string | null;
+    },
   ) {
     const targetUrl = normalizeTarget(input.targetUrl);
     if (input.channelId) {
@@ -95,6 +102,14 @@ export class LinksService {
         .where(and(eq(channels.id, input.channelId), eq(channels.ownerId, ownerId)))
         .limit(1);
       if (!c) throw new NotFoundException('Канал не найден');
+    }
+    if (input.postId) {
+      const [p] = await this.db
+        .select({ id: posts.id })
+        .from(posts)
+        .where(and(eq(posts.id, input.postId), eq(posts.ownerId, ownerId)))
+        .limit(1);
+      if (!p) throw new NotFoundException('Пост не найден');
     }
     for (let attempt = 0; attempt < 5; attempt++) {
       const slug = newSlug();
@@ -106,6 +121,7 @@ export class LinksService {
           title: input.title.trim(),
           targetUrl,
           channelId: input.channelId ?? null,
+          postId: input.postId ?? null,
           isAd: !!input.isAd,
         })
         .onConflictDoNothing()

@@ -1,6 +1,9 @@
 'use client';
 
 import {
+  AD_MARKING_LABELS,
+  adMarkingMissing,
+  type AdInfo,
   utcToZonedWallTime,
   zonedDayKey,
   zonedWallTimeToUtc,
@@ -16,6 +19,9 @@ import type { PublicationView } from '../posts/types';
 
 interface Props {
   postId: string;
+  kind: 'regular' | 'ad';
+  text: string;
+  ad: AdInfo;
   channels: Channel[];
   timezone: string;
   problems: ContentProblem[];
@@ -29,6 +35,9 @@ interface Slot {
   wall: string;
   best?: boolean;
 }
+
+/** Срок публикации: «1/24», «1/48», «1/72», неделя; null — не удалять. */
+const LIFETIMES: (number | null)[] = [null, 24, 48, 72, 168];
 
 const pad = (n: number) => String(n).padStart(2, '0');
 
@@ -53,6 +62,9 @@ function nextWall(dayOffsets: number[], hour: number, tz: string, weekday?: numb
  */
 export function PublishPanel({
   postId,
+  kind,
+  text,
+  ad,
   channels,
   timezone,
   problems,
@@ -71,9 +83,24 @@ export function PublishPanel({
   const [custom, setCustom] = useState(() =>
     utcToZonedWallTime(new Date(Date.now() + 3600_000), timezone),
   );
+  const [lifetime, setLifetime] = useState<number | null>(kind === 'ad' ? 24 : null);
+  const [customHours, setCustomHours] = useState('');
+  const [accountConnected, setAccountConnected] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    let cancelled = false;
+    api
+      .get<{ connected: boolean }>('/mtproto')
+      .then((r) => !cancelled && setAccountConnected(r.connected))
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const marking = kind === 'ad' ? adMarkingMissing(text, ad) : [];
   const bestChannel = selected[0] ?? active[0]?.id;
   useEffect(() => {
     if (!bestChannel) return;
@@ -116,7 +143,11 @@ export function PublishPanel({
   const toggle = (id: string) =>
     setSelected((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
   const disabled =
-    busy || selected.length === 0 || problems.length > 0 || (mode === 'later' && !wall);
+    busy ||
+    selected.length === 0 ||
+    problems.length > 0 ||
+    marking.length > 0 ||
+    (mode === 'later' && !wall);
 
   const fmtWall = (w: string) =>
     format.dateTime(zonedWallTimeToUtc(w, timezone), {
@@ -152,6 +183,7 @@ export function PublishPanel({
         channelIds: selected,
         scheduledAt,
         version,
+        deleteAfterHours: lifetime,
       });
       haptic('success');
       onPublished(r.items);
@@ -247,6 +279,59 @@ export function PublishPanel({
           )}
           {slots.some((s) => s.best) && <p className="text-xs text-text-faint">{t('bestHint')}</p>}
         </>
+      )}
+
+      <div className="flex flex-col gap-2">
+        <span className="text-sm font-semibold">{t('lifetime.title')}</span>
+        <div
+          className="-mx-4 flex gap-2 overflow-x-auto px-4 [scrollbar-width:none]"
+          role="radiogroup"
+          aria-label={t('lifetime.title')}
+        >
+          {LIFETIMES.map((h) => (
+            <button
+              key={String(h)}
+              type="button"
+              role="radio"
+              aria-checked={lifetime === h && !customHours}
+              onClick={() => {
+                setCustomHours('');
+                setLifetime(h);
+              }}
+              className={`min-h-9 shrink-0 rounded-full px-3.5 text-sm font-semibold whitespace-nowrap ${lifetime === h && !customHours ? 'bg-ink text-on-ink' : 'border border-border bg-surface'}`}
+            >
+              {h === null ? t('lifetime.forever') : t('lifetime.hours', { h })}
+            </button>
+          ))}
+          <input
+            className={`${inputCls} min-h-9 w-24 shrink-0 rounded-full text-center ${customHours ? 'border-ink' : ''}`}
+            inputMode="numeric"
+            placeholder={t('lifetime.custom')}
+            value={customHours}
+            onChange={(e) => {
+              const v = e.target.value.replace(/\D/g, '').slice(0, 3);
+              setCustomHours(v);
+              setLifetime(v ? Math.min(720, Math.max(1, Number(v))) : kind === 'ad' ? 24 : null);
+            }}
+          />
+        </div>
+        {lifetime !== null && (
+          <p
+            className={`text-xs ${lifetime > 48 && !accountConnected ? 'text-warn' : 'text-text-faint'}`}
+          >
+            {lifetime > 48
+              ? accountConnected
+                ? t('lifetime.longWithAccount')
+                : t('lifetime.longNoAccount')
+              : t('lifetime.note', { h: lifetime })}
+          </p>
+        )}
+      </div>
+
+      {marking.length > 0 && (
+        <p className="rounded-[12px] bg-warn-soft px-3 py-2 text-sm text-warn" aria-live="polite">
+          {t('marking', { list: marking.map((k) => AD_MARKING_LABELS[k]).join(', ') })}
+        </p>
       )}
 
       {problems.length > 0 && (

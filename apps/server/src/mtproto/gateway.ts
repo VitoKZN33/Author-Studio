@@ -72,6 +72,13 @@ export interface MtprotoGateway {
     channel: ChannelRef,
     messageIds: number[],
   ): Promise<MessageViews[]>;
+  /** Удаляет сообщения канала от имени владельца (без ограничения 48 часов у бота). */
+  deleteMessages(
+    creds: MtprotoCredentials,
+    session: string,
+    channel: ChannelRef,
+    messageIds: number[],
+  ): Promise<void>;
   /** Завершает сессию на стороне Telegram (видна в «Активных сеансах»). */
   logout(creds: MtprotoCredentials, session: string): Promise<void>;
 }

@@ -50,6 +50,13 @@
       "when": 1792940134128,
       "tag": "0006_stats_links",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1792941637416,
+      "tag": "0007_ad_posts",
+      "breakpoints": true
     }
   ]
 }

@@ -24,6 +24,7 @@ const createSchema = z.object({
   targetUrl: z.string().trim().min(8).max(2048),
   channelId: z.uuid().nullable().optional(),
   isAd: z.boolean().optional(),
+  postId: z.uuid().nullable().optional(),
 });
 
 @ApiTags('links')

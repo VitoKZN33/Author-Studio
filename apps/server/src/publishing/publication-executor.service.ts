@@ -214,6 +214,9 @@ export class PublicationExecutor {
           publishedAt: new Date(),
           lastError: null,
           updatedAt: new Date(),
+          // Срок публикации отсчитывается от фактического выхода.
+          deleteAt: sql`case when ${publications.deleteAfterHours} is null then null else now() + ${publications.deleteAfterHours} * interval '1 hour' end`,
+          deleteStatus: sql`case when ${publications.deleteAfterHours} is null then null else 'pending' end`,
         })
         .where(eq(publications.id, c.id));
       await this.finishAttempt(c.attemptId, 'ok');

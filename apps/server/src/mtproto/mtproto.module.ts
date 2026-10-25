@@ -7,19 +7,28 @@ import { MtprotoService } from './mtproto.service.js';
 import { MtprotoStore } from './mtproto.store.js';
 import { ViewsCollector } from './views-collector.js';
 
-const gateway = {
-  provide: MTPROTO_GATEWAY,
-  inject: [APP_CONFIG],
-  useFactory: (config: AppConfig) => new GramJsGateway(config.TELEGRAM_PROXY_URL),
-};
+/** Шлюз MTProto и хранилище аккаунта (по экземпляру на процесс). */
+@Module({
+  providers: [
+    {
+      provide: MTPROTO_GATEWAY,
+      inject: [APP_CONFIG],
+      useFactory: (config: AppConfig) => new GramJsGateway(config.TELEGRAM_PROXY_URL),
+    },
+    MtprotoStore,
+  ],
+  exports: [MTPROTO_GATEWAY, MtprotoStore],
+})
+export class MtprotoCoreModule {}
 
 /** API: подключение аккаунта владельца (вход живёт в процессе api). */
 @Module({
+  imports: [MtprotoCoreModule],
   controllers: [MtprotoController],
-  providers: [gateway, MtprotoStore, MtprotoService],
+  providers: [MtprotoService],
 })
 export class MtprotoApiModule {}
 
 /** Worker: сбор просмотров и пересылок по расписанию. */
-@Module({ providers: [gateway, MtprotoStore, ViewsCollector] })
+@Module({ imports: [MtprotoCoreModule], providers: [ViewsCollector] })
 export class MtprotoWorkerModule {}

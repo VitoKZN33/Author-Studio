@@ -81,6 +81,7 @@ export function PostCard({
           {item.summary || t('noText')}
         </p>
         <p className="mt-auto truncate text-[12px] text-text-faint">
+          {item.kind === 'ad' && <span className="mr-1 font-bold text-warn">{t('adTag')}</span>}
           {meta}
           {showChannel && pub ? `, ${pub.channelTitle}` : ''}
         </p>

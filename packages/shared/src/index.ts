@@ -3,3 +3,4 @@ export * from './health';
 export * from './post-content';
 export * from './time-zone';
 export * from './ai-text';
+export * from './ad-marking';

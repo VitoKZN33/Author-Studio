@@ -1,3 +1,4 @@
+import { AD_MARKING_LABELS, adMarkingMissing } from '@author-studio/shared';
 import {
   BadRequestException,
   ConflictException,
@@ -55,7 +56,12 @@ export class PublishingService {
   async publish(
     ownerId: string,
     postId: string,
-    input: { channelIds: string[]; scheduledAt?: string | null; version: number },
+    input: {
+      channelIds: string[];
+      scheduledAt?: string | null;
+      version: number;
+      deleteAfterHours?: number | null;
+    },
   ): Promise<PublicationView[]> {
     const post = await this.posts.getOwned(ownerId, postId);
     if (post.version !== input.version) {
@@ -71,6 +77,19 @@ export class PublishingService {
         message: 'Публикацию нельзя отправить: ' + problems.map((p) => p.message).join('; '),
         details: problems,
       });
+    }
+
+    // Рекламный пост: без пометки «Реклама» и ERID не отправляем (если маркировка нужна).
+    if (post.kind === 'ad') {
+      const missing = adMarkingMissing(post.content.text, post.ad ?? {}).map(
+        (k) => AD_MARKING_LABELS[k],
+      );
+      if (missing.length) {
+        throw new UnprocessableEntityException({
+          message: `В рекламном посте нет обязательной маркировки: ${missing.join(', ')}. Добавьте её в редакторе (кнопка «Вставить маркировку») или отметьте, что ERID не требуется.`,
+          details: { code: 'ad_marking', missing },
+        });
+      }
     }
 
     const channelIds = [...new Set(input.channelIds)];
@@ -98,6 +117,7 @@ export class PublishingService {
             channelId: c.id,
             status: 'scheduled' as const,
             scheduledAt,
+            deleteAfterHours: input.deleteAfterHours ?? null,
           })),
         )
         .returning();
@@ -168,6 +188,32 @@ export class PublishingService {
       .where(eq(channels.id, row.channelId))
       .limit(1);
     return toPublicationView(row, c?.title ?? '—', c?.username ?? null);
+  }
+
+  /** Срок публикации: изменить (часы от выхода) или отменить удаление (null). */
+  async setLifetime(ownerId: string, id: string, hours: number | null): Promise<PublicationView> {
+    const row = await this.getOwned(ownerId, id);
+    if (row.deleteStatus === 'deleted') throw new ConflictException('Пост уже удалён из канала');
+    const base = row.publishedAt ?? null;
+    const [updated] = await this.db
+      .update(publications)
+      .set({
+        deleteAfterHours: hours,
+        deleteAt: hours && base ? new Date(base.getTime() + hours * 3600_000) : null,
+        deleteStatus: hours && base ? 'pending' : null,
+        deleteError: null,
+        updatedAt: new Date(),
+      })
+      .where(eq(publications.id, id))
+      .returning();
+    await this.audit.record({
+      action: 'publication.lifetime',
+      actorUserId: ownerId,
+      entityType: 'publication',
+      entityId: id,
+      metadata: { hours },
+    });
+    return this.view(updated!);
   }
 
   async reschedule(ownerId: string, id: string, scheduledAt: string): Promise<PublicationView> {

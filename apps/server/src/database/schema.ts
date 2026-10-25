@@ -1,5 +1,7 @@
 import { sql } from 'drizzle-orm';
-import type { PostContent } from '@author-studio/shared';
+import type { AdInfo, PostContent } from '@author-studio/shared';
+
+export type { AdInfo };
 import {
   bigint,
   bigserial,
@@ -180,6 +182,7 @@ export const mediaAssets = pgTable(
 );
 
 /** Публикация-черновик: содержимое + номер версии для защиты от затирания правок. */
+
 export const posts = pgTable(
   'posts',
   {
@@ -187,6 +190,10 @@ export const posts = pgTable(
     ownerId: uuid('owner_id').references(() => users.id, { onDelete: 'set null' }),
     content: jsonb('content').$type<PostContent>().notNull(),
     version: integer('version').notNull().default(1),
+    /** regular — обычный пост, ad — рекламный (маркировка, срок, ссылки). */
+    kind: text('kind').$type<'regular' | 'ad'>().notNull().default('regular'),
+    /** Данные рекламного поста: рекламодатель, ИНН, ERID; noErid — маркировка не требуется. */
+    ad: jsonb('ad').$type<AdInfo>(),
     ...timestamps,
     deletedAt: timestamp('deleted_at', { withTimezone: true }),
   },
@@ -230,12 +237,20 @@ export const publications = pgTable(
     publishedAt: timestamp('published_at', { withTimezone: true }),
     attempts: integer('attempts').notNull().default(0),
     lastError: text('last_error'),
+    /** Срок публикации: удалить из канала через N часов после выхода (null — не удалять). */
+    deleteAfterHours: integer('delete_after_hours'),
+    deleteAt: timestamp('delete_at', { withTimezone: true }),
+    /** pending — ждёт удаления, deleted — удалён, failed — удалить не удалось. */
+    deleteStatus: text('delete_status').$type<'pending' | 'deleted' | 'failed'>(),
+    deletedAt: timestamp('deleted_at', { withTimezone: true }),
+    deleteError: text('delete_error'),
     ...timestamps,
   },
   (t) => [
     index('publications_owner_scheduled_idx').on(t.ownerId, t.scheduledAt),
     index('publications_status_scheduled_idx').on(t.status, t.scheduledAt),
     index('publications_post_idx').on(t.postId),
+    index('publications_delete_idx').on(t.deleteStatus, t.deleteAt),
     // Не больше одной активной отправки поста в канал.
     uniqueIndex('publications_active_unique_idx')
       .on(t.postId, t.channelId)
@@ -478,6 +493,7 @@ export const trackedLinks = pgTable(
     id: uuid('id').primaryKey().defaultRandom(),
     ownerId: uuid('owner_id').references(() => users.id, { onDelete: 'set null' }),
     channelId: uuid('channel_id').references(() => channels.id, { onDelete: 'set null' }),
+    postId: uuid('post_id').references(() => posts.id, { onDelete: 'set null' }),
     slug: text('slug').notNull(),
     title: text('title').notNull(),
     targetUrl: text('target_url').notNull(),

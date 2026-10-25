@@ -626,3 +626,110 @@ describe('календарь и границы доступа', () => {
     await db().query('delete from users where id = $1', [u[0].id]);
   });
 });
+
+describe('рекламный пост и срок публикации', () => {
+  async function adDraft(text: string, ad: Record<string, unknown> = {}) {
+    const r = await api('POST', '/posts', { content: textContent(text), kind: 'ad', ad });
+    expect(r.status).toBe(201);
+    expect(r.body.kind).toBe('ad');
+    return r.body as { id: string; version: number };
+  }
+
+  it('рекламный пост без пометки «Реклама» и erid не отправляется; с маркировкой — уходит', async () => {
+    const d = await adDraft('Скидки в кофейне', { advertiser: 'ООО «Зерно»', inn: '1655000000' });
+    const bad = await api('POST', `/posts/${d.id}/publish`, {
+      channelIds: [channelA],
+      version: d.version,
+    });
+    expect(bad.status).toBe(422);
+    expect(bad.body.error.details.missing).toEqual(
+      expect.arrayContaining(['пометка «Реклама»', 'токен erid']),
+    );
+    const saved = await api('PUT', `/posts/${d.id}`, {
+      content: textContent(
+        'Реклама. ООО «Зерно», ИНН 1655000000. erid: 2SDnje1\n\nСкидки в кофейне',
+      ),
+      version: d.version,
+    });
+    const ok = await api('POST', `/posts/${d.id}/publish`, {
+      channelIds: [channelA],
+      version: saved.body.version,
+    });
+    expect(ok.status).toBe(200);
+  });
+
+  it('«ERID не требуется» снимает проверку; ИНН проверяется по формату', async () => {
+    const d = await adDraft('Взаимный пиар с каналом друга');
+    expect((await api('PUT', `/posts/${d.id}/ad`, { inn: '123' })).status).toBe(400);
+    const r = await api('PUT', `/posts/${d.id}/ad`, { noErid: true });
+    expect(r.body.ad).toEqual({ noErid: true });
+    const ok = await api('POST', `/posts/${d.id}/publish`, {
+      channelIds: [channelB],
+      version: r.body.version,
+    });
+    expect(ok.status).toBe(200);
+  });
+
+  it('срок публикации: после выхода ставится время удаления, по сроку бот удаляет пост', async () => {
+    const d = await draft(textContent('Пост на сутки'));
+    const r = await api('POST', `/posts/${d.id}/publish`, {
+      channelIds: [channelA],
+      version: d.version,
+      deleteAfterHours: 24,
+    });
+    const id = r.body.items[0].id;
+    await waitFor(async () => (await pubStatus(id)) === 'published');
+    const { rows } = await db().query(
+      'select delete_status, extract(epoch from (delete_at - published_at))::int as secs from publications where id = $1',
+      [id],
+    );
+    expect(rows[0]).toEqual({ delete_status: 'pending', secs: 24 * 3600 });
+
+    fake.on('deleteMessages', () => true);
+    await db().query(
+      "update publications set delete_at = now() - interval '1 minute' where id = $1",
+      [id],
+    );
+    const { PublicationDeleter: Deleter } =
+      await import('../../src/publishing/publication-deleter.service.js');
+    expect(await worker!.get(Deleter).runDue()).toBe(1);
+    expect(fake.callsOf('deleteMessages')[0]!.params).toMatchObject({ chat_id: -1001000000001 });
+    const view = await api('GET', `/posts/${d.id}`);
+    expect(view.body.publications[0]).toMatchObject({
+      deleteStatus: 'deleted',
+      deleteAfterHours: 24,
+    });
+  });
+
+  it('Telegram не дал удалить (и аккаунт не подключён) → «не удалось», владелец получает просьбу', async () => {
+    const d = await draft(textContent('Пост на 72 часа'));
+    const r = await api('POST', `/posts/${d.id}/publish`, {
+      channelIds: [channelB],
+      version: d.version,
+      deleteAfterHours: 72,
+    });
+    const id = r.body.items[0].id;
+    await waitFor(async () => (await pubStatus(id)) === 'published');
+    fake.on('deleteMessages', () => {
+      throw new FakeTelegramError(400, "Bad Request: message can't be deleted");
+    });
+    await db().query(
+      "update publications set delete_at = now() - interval '1 minute' where id = $1",
+      [id],
+    );
+    const { PublicationDeleter: Deleter } =
+      await import('../../src/publishing/publication-deleter.service.js');
+    expect(await worker!.get(Deleter).runDue()).toBe(0);
+    const { rows } = await db().query(
+      'select delete_status, delete_error from publications where id = $1',
+      [id],
+    );
+    expect(rows[0].delete_status).toBe('failed');
+    expect(rows[0].delete_error).toMatch(/can't be deleted/);
+    await waitFor(async () =>
+      fake
+        .callsOf('sendMessage')
+        .some((c) => String(c.params.text).includes('удалите его вручную')),
+    );
+  });
+});

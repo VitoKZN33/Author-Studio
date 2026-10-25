@@ -143,6 +143,11 @@ export function PostViewScreen() {
             </Pill>
             <span className="font-semibold">{fmt(p.publishedAt ?? p.scheduledAt)}</span>
             <span className="text-text-faint">{p.channelTitle}</span>
+            <Lifetime
+              p={p}
+              fmt={fmt}
+              onChange={(x) => setPubs((ps) => ps.map((y) => (y.id === x.id ? x : y)))}
+            />
           </li>
         ))}
       </ul>
@@ -237,5 +242,59 @@ function Metric({
       </dd>
       <KindTag kind={kind} />
     </div>
+  );
+}
+
+/** Срок публикации: когда удалится, удалён ли, и «не удалять». */
+function Lifetime({
+  p,
+  fmt,
+  onChange,
+}: {
+  p: PublicationView;
+  fmt: (iso: string) => string;
+  onChange: (p: PublicationView) => void;
+}) {
+  const t = useTranslations('postView.lifetime');
+  const [busy, setBusy] = useState(false);
+  if (!p.deleteAfterHours && !p.deleteStatus) return null;
+
+  async function keep() {
+    setBusy(true);
+    try {
+      onChange(
+        await api.post<PublicationView>(`/publications/${p.id}/lifetime`, {
+          deleteAfterHours: null,
+        }),
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const text =
+    p.deleteStatus === 'deleted'
+      ? t('deleted', { when: fmt(p.deletedAt ?? p.deleteAt ?? '') })
+      : p.deleteStatus === 'failed'
+        ? t('failed')
+        : p.deleteAt
+          ? t('willDelete', { when: fmt(p.deleteAt) })
+          : t('afterPublish', { h: p.deleteAfterHours ?? 0 });
+  return (
+    <span className="flex basis-full flex-wrap items-center gap-2 text-[13px]">
+      <span className={p.deleteStatus === 'failed' ? 'text-danger' : 'text-text-muted'}>
+        🗑 {text}
+      </span>
+      {(p.deleteStatus === 'pending' || (!p.deleteStatus && p.status === 'scheduled')) && (
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => void keep()}
+          className="font-semibold text-accent"
+        >
+          {t('keep')}
+        </button>
+      )}
+    </span>
   );
 }

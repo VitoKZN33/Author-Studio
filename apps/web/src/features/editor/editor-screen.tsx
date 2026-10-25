@@ -24,6 +24,8 @@ import { docToMessage, messageToDoc, type PMNode } from './convert';
 import { MediaPanel } from './media-panel';
 import { PostPreview } from './preview';
 import { PublicationsList } from './publications-list';
+import { AdPanel } from './ad-panel';
+import { LinkPanel } from './link-panel';
 import { PublishPanel } from './publish-panel';
 import { RichEditor } from './rich-editor';
 import { takeRestorableBackup, useAutosave, type SaveState } from './use-autosave';
@@ -79,6 +81,8 @@ function EditorLoaded({ initial }: { initial: PostView }) {
   const [publications, setPublications] = useState<PublicationView[]>(initial.publications);
   const [channels, setChannels] = useState<Channel[]>([]);
   const [sheet, setSheet] = useState<'preview' | 'publish' | null>(null);
+  const [kind, setKind] = useState<'regular' | 'ad'>(initial.kind ?? 'regular');
+  const [ad, setAd] = useState(initial.ad ?? {});
   const autosave = useAutosave(initial.id, initial.version);
 
   useEffect(() => {
@@ -129,6 +133,31 @@ function EditorLoaded({ initial }: { initial: PostView }) {
   }
 
   /** Текст от AI (или возврат прежнего): редактор пересоздаётся из нового содержимого. */
+  /** Строка в начало текста (маркировка рекламы): смещения entities сдвигаются. */
+  function prependLine(line: string) {
+    const sep = content.text.trim() ? '\n\n' : '';
+    const shift = line.length + sep.length;
+    applyText({
+      text: line + sep + content.text,
+      entities: content.entities.map((e) => ({ ...e, offset: e.offset + shift })),
+    });
+  }
+
+  function appendText(extra: string) {
+    const sep = content.text.trim() ? '\n\n' : '';
+    applyText({ text: content.text + sep + extra, entities: content.entities });
+  }
+
+  function addLinkButton(url: string) {
+    update({ ...content, buttons: [...content.buttons, [{ text: t('link.buttonText'), url }]] });
+  }
+
+  async function makeAd() {
+    const r = await api.put<PostView>(`/posts/${initial.id}/ad`, {});
+    setKind(r.kind);
+    setAd(r.ad ?? {});
+  }
+
   function applyText(next: Pick<PostContent, 'text' | 'entities'>) {
     setDoc(messageToDoc(next.text, next.entities));
     setEditorKey((k) => k + 1);
@@ -194,6 +223,15 @@ function EditorLoaded({ initial }: { initial: PostView }) {
             >
               {t('duplicate')}
             </button>
+            {kind === 'regular' && (
+              <button
+                type="button"
+                onClick={() => void makeAd()}
+                className="px-4 py-3 text-left text-sm hover:bg-surface-2"
+              >
+                {t('makeAd')}
+              </button>
+            )}
             {!hasActive && (
               <button
                 type="button"
@@ -267,11 +305,26 @@ function EditorLoaded({ initial }: { initial: PostView }) {
               </span>
             </div>
           </div>
+          {kind === 'ad' && (
+            <AdPanel
+              postId={initial.id}
+              initial={ad}
+              text={content.text}
+              onInsert={prependLine}
+              onChange={setAd}
+            />
+          )}
           <MediaPanel items={orderedMedia} onChange={onMedia} />
           <EditorAiPanel
             current={{ text: content.text, entities: content.entities }}
             hasMedia={content.media.length > 0}
             onApply={applyText}
+          />
+          <LinkPanel
+            postId={initial.id}
+            isAd={kind === 'ad'}
+            onInsertText={appendText}
+            onInsertButton={addLinkButton}
           />
           <details
             className="group rounded-[16px] border border-border bg-surface"
@@ -342,6 +395,9 @@ function EditorLoaded({ initial }: { initial: PostView }) {
           <PostPreview content={content} media={orderedMedia} channelTitle={channelTitle} compact />
           <PublishPanel
             postId={initial.id}
+            kind={kind}
+            text={content.text}
+            ad={ad}
             channels={channels}
             timezone={timezone}
             problems={problems}

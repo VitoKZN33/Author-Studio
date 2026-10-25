@@ -6,14 +6,22 @@ import type { ReactNode } from 'react';
 import { AuthGate } from '@/features/session/auth-gate';
 import { CURRENT_STAGE, POSTPONED_SECTIONS, SECTIONS, TAB_OF, type SectionKey } from '../sections';
 import { Icon, type IconName } from './icons';
-import { useNewPost } from './new-post';
+import { NewPostProvider, useNewPost } from './new-post';
 
 /**
  * Каркас приложения: нижняя панель на смартфоне (Главная, Посты, «+», Статистика, Ещё)
  * и боковая навигация на широком экране (Telegram Desktop). Отложенные разделы видны,
  * но неактивны — интерфейс не выдаёт их за работающие.
  */
-export function AppShell({
+export function AppShell(props: { active: SectionKey; children: ReactNode; bare?: boolean }) {
+  return (
+    <NewPostProvider>
+      <Shell {...props} />
+    </NewPostProvider>
+  );
+}
+
+function Shell({
   active,
   children,
   bare = false,

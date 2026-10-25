@@ -9,6 +9,7 @@ import type { Job, Queue, Worker } from 'bullmq';
 import type { Redis } from 'ioredis';
 import { BULL_CONNECTION, PUBLICATIONS_QUEUE } from '../queue/queue.module.js';
 import { createWorker, QUEUE_NAMES } from '../queue/queues.js';
+import { PublicationDeleter } from './publication-deleter.service.js';
 import { PublicationExecutor } from './publication-executor.service.js';
 import { RECONCILE_JOB, type PublishJobData } from './publication-jobs.js';
 
@@ -23,6 +24,7 @@ export class PublicationsProcessor implements OnApplicationBootstrap, OnApplicat
     @Inject(BULL_CONNECTION) private readonly connection: Redis,
     @Inject(PUBLICATIONS_QUEUE) private readonly queue: Queue,
     private readonly executor: PublicationExecutor,
+    private readonly deleter: PublicationDeleter,
   ) {}
 
   async onApplicationBootstrap(): Promise<void> {
@@ -58,7 +60,15 @@ export class PublicationsProcessor implements OnApplicationBootstrap, OnApplicat
   }
 
   async process(job: Job): Promise<unknown> {
-    if (job.name === RECONCILE_JOB) return this.executor.reconcile();
+    if (job.name === RECONCILE_JOB) {
+      const r = await this.executor.reconcile();
+      // Удаление по сроку публикации — на том же ежеминутном такте.
+      const deleted = await this.deleter.runDue().catch((err: Error) => {
+        this.logger.error({ err: err.message }, 'Удаление по сроку не выполнено');
+        return 0;
+      });
+      return { ...r, deleted };
+    }
     return this.executor.execute((job.data as PublishJobData).publicationId);
   }
 }

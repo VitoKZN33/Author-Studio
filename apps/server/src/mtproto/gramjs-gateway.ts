@@ -251,6 +251,46 @@ export class GramJsGateway implements MtprotoGateway {
     return entry;
   }
 
+  private async peerFor(
+    entry: { client: TelegramClient; dialogsLoaded: boolean },
+    channel: ChannelRef,
+  ) {
+    const { client } = entry;
+    const peerChannel = new Api.PeerChannel({
+      channelId: bigInt(String(-channel.chatId - 1_000_000_000_000n)),
+    });
+    try {
+      return await withTimeout(
+        channel.username
+          ? client.getInputEntity(channel.username)
+          : client.getInputEntity(peerChannel),
+      );
+    } catch {
+      // access_hash канала есть в списке диалогов владельца — загружаем его один раз.
+      if (!entry.dialogsLoaded) {
+        await withTimeout(client.getDialogs({ limit: 300 }), 60_000);
+        entry.dialogsLoaded = true;
+      }
+      return withTimeout(client.getInputEntity(peerChannel));
+    }
+  }
+
+  async deleteMessages(
+    creds: MtprotoCredentials,
+    session: string,
+    channel: ChannelRef,
+    messageIds: number[],
+  ): Promise<void> {
+    if (messageIds.length === 0) return;
+    try {
+      const entry = await this.clientFor(creds, session);
+      const peer = await this.peerFor(entry, channel);
+      await withTimeout(entry.client.deleteMessages(peer, messageIds, { revoke: true }));
+    } catch (e) {
+      throw mapError(e);
+    }
+  }
+
   async fetchViews(
     creds: MtprotoCredentials,
     session: string,

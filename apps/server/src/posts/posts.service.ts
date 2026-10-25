@@ -9,7 +9,7 @@ import { EMPTY_POST_CONTENT, summarizeContent, type PostContent } from '@author-
 import { and, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { AuditService } from '../audit/audit.service.js';
 import { DB, type Database } from '../database/database.module.js';
-import { channels, posts, publications } from '../database/schema.js';
+import { type AdInfo, channels, posts, publications } from '../database/schema.js';
 import { MediaService, toMediaView } from '../media/media.service.js';
 
 export type PostRow = typeof posts.$inferSelect;
@@ -26,6 +26,11 @@ export interface PublicationView {
   messageIds: number[] | null;
   attempts: number;
   lastError: string | null;
+  deleteAfterHours: number | null;
+  deleteAt: string | null;
+  deleteStatus: 'pending' | 'deleted' | 'failed' | null;
+  deletedAt: string | null;
+  deleteError: string | null;
 }
 
 export const ACTIVE_PUBLICATION_STATUSES = ['scheduled', 'sending', 'ambiguous'] as const;
@@ -75,6 +80,8 @@ export class PostsService {
     );
     return {
       id: row.id,
+      kind: row.kind,
+      ad: row.ad ?? null,
       content: row.content,
       version: row.version,
       createdAt: row.createdAt.toISOString(),
@@ -106,6 +113,7 @@ export class PostsService {
     );
     return rows.map((r) => ({
       id: r.id,
+      kind: r.kind,
       summary: summarizeContent(r.content),
       excerpt: r.content.text.slice(0, 280),
       cover: (() => {
@@ -120,9 +128,17 @@ export class PostsService {
     }));
   }
 
-  async create(ownerId: string, content: PostContent = EMPTY_POST_CONTENT) {
+  async create(
+    ownerId: string,
+    content: PostContent = EMPTY_POST_CONTENT,
+    kind: 'regular' | 'ad' = 'regular',
+    ad: AdInfo | null = null,
+  ) {
     await this.assertMediaOwned(ownerId, content);
-    const [row] = await this.db.insert(posts).values({ ownerId, content }).returning();
+    const [row] = await this.db
+      .insert(posts)
+      .values({ ownerId, content, kind, ad: kind === 'ad' ? (ad ?? {}) : null })
+      .returning();
     await this.audit.record({
       action: 'post.created',
       actorUserId: ownerId,
@@ -160,7 +176,24 @@ export class PostsService {
 
   async duplicate(ownerId: string, id: string) {
     const src = await this.getOwned(ownerId, id);
-    return this.create(ownerId, src.content);
+    // Копия рекламного поста — новое размещение: ERID у каждого креатива свой.
+    return this.create(
+      ownerId,
+      src.content,
+      src.kind,
+      src.ad ? { ...src.ad, erid: undefined } : null,
+    );
+  }
+
+  /** Данные рекламного поста (рекламодатель, ИНН, ERID). Обычный пост становится рекламным. */
+  async setAd(ownerId: string, id: string, ad: AdInfo) {
+    await this.getOwned(ownerId, id);
+    const [row] = await this.db
+      .update(posts)
+      .set({ kind: 'ad', ad, updatedAt: new Date() })
+      .where(eq(posts.id, id))
+      .returning();
+    return this.view(ownerId, row!);
   }
 
   async remove(ownerId: string, id: string): Promise<void> {
@@ -205,5 +238,10 @@ export function toPublicationView(
     messageIds: p.messageIds,
     attempts: p.attempts,
     lastError: p.lastError,
+    deleteAfterHours: p.deleteAfterHours,
+    deleteAt: p.deleteAt?.toISOString() ?? null,
+    deleteStatus: p.deleteStatus,
+    deletedAt: p.deletedAt?.toISOString() ?? null,
+    deleteError: p.deleteError,
   };
 }

@@ -62,6 +62,7 @@ const fake: Gateway = {
       forwards: views.get(id)?.forwards ?? null,
     }));
   },
+  async deleteMessages() {},
   async logout(_c, session) {
     calls.push(`logout:${session === SESSION}`);
   },

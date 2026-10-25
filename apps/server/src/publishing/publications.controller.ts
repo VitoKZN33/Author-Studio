@@ -25,9 +25,25 @@ const publishSchema = z.object({
     .nullable()
     .optional(),
   version: z.number().int().min(1),
+  /** Срок публикации: удалить из канала через N часов (нет — не удалять). */
+  deleteAfterHours: z
+    .number()
+    .int()
+    .min(1)
+    .max(24 * 30)
+    .nullable()
+    .optional(),
 });
 const rescheduleSchema = z.object({
   scheduledAt: z.iso.datetime({ offset: true, error: 'ожидается время ISO 8601' }),
+});
+const lifetimeSchema = z.object({
+  deleteAfterHours: z
+    .number()
+    .int()
+    .min(1)
+    .max(24 * 30)
+    .nullable(),
 });
 const resolveSchema = z.object({ outcome: z.enum(['published', 'resend']) });
 const STATUSES = ['scheduled', 'sending', 'published', 'failed', 'ambiguous', 'cancelled'] as const;
@@ -88,6 +104,16 @@ export class PublicationsController {
     @Body(new ZodValidationPipe(rescheduleSchema)) body: z.infer<typeof rescheduleSchema>,
   ) {
     return this.publishing.reschedule(req.auth.userId, id, body.scheduledAt);
+  }
+
+  @Post('publications/:id/lifetime')
+  @ApiOperation({ summary: 'Срок публикации: удалить через N часов после выхода или не удалять' })
+  lifetime(
+    @Req() req: AuthenticatedRequest,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body(new ZodValidationPipe(lifetimeSchema)) body: z.infer<typeof lifetimeSchema>,
+  ) {
+    return this.publishing.setLifetime(req.auth.userId, id, body.deleteAfterHours);
   }
 
   @Post('publications/:id/cancel')

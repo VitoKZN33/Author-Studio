@@ -1,4 +1,4 @@
-import type { PostContent } from '@author-studio/shared';
+import type { AdInfo, PostContent } from '@author-studio/shared';
 
 export type PublicationStatus =
   'scheduled' | 'sending' | 'published' | 'failed' | 'ambiguous' | 'cancelled';
@@ -15,6 +15,11 @@ export interface PublicationView {
   messageIds: number[] | null;
   attempts: number;
   lastError: string | null;
+  deleteAfterHours?: number | null;
+  deleteAt?: string | null;
+  deleteStatus?: 'pending' | 'deleted' | 'failed' | null;
+  deletedAt?: string | null;
+  deleteError?: string | null;
   summary?: string;
 }
 
@@ -28,6 +33,8 @@ export interface MediaView {
 
 export interface PostView {
   id: string;
+  kind: 'regular' | 'ad';
+  ad: AdInfo | null;
   content: PostContent;
   version: number;
   createdAt: string;
@@ -38,6 +45,7 @@ export interface PostView {
 
 export interface PostListItem {
   id: string;
+  kind?: 'regular' | 'ad';
   summary: string;
   /** Начало текста — для постов без картинки. */
   excerpt: string;
