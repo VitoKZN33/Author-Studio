@@ -59,8 +59,16 @@ export function SettingsScreen() {
           ›
         </span>
       </Link>
+      <Link
+        href="/ai/?tab=settings"
+        className="flex min-h-12 items-center justify-between rounded-[var(--radius-card)] border border-border bg-surface px-4 text-sm hover:border-border-strong"
+      >
+        {t('aiLink')}
+        <span aria-hidden className="text-text-faint">
+          ›
+        </span>
+      </Link>
       <NotificationSettings />
-      <p className="max-w-prose text-sm text-text-muted">{t('more')}</p>
       <div>
         <button
           type="button"

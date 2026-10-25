@@ -12,6 +12,8 @@ describe('миграции БД', () => {
       "select table_name from information_schema.tables where table_schema='public' order by 1",
     );
     expect(rows.map((r) => r.table_name)).toEqual([
+      'ai_requests',
+      'ai_settings',
       'audit_log',
       'channel_member_events',
       'channel_messages',

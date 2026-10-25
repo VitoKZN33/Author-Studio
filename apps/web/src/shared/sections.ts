@@ -13,7 +13,10 @@ export const SECTIONS = [
 export type SectionKey = (typeof SECTIONS)[number]['key'];
 
 /** Последний завершённый этап: разделы более поздних этапов показываются неактивными. */
-export const CURRENT_STAGE = 5;
+export const CURRENT_STAGE = 7;
+
+/** Разделы, отложенные по решению владельца (docs/DECISIONS.md, ADR-032). */
+export const POSTPONED_SECTIONS: readonly SectionKey[] = ['ads'];
 
 /** Разделы нижней панели на смартфоне (не больше пяти). */
 export const MOBILE_TABS: readonly SectionKey[] = [

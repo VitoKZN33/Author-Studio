@@ -8,5 +8,6 @@ import { PublishingService } from './publishing.service.js';
 @Module({
   controllers: [PostsController, PublicationsController],
   providers: [PostsService, PublishingService],
+  exports: [PostsService],
 })
 export class PublishingApiModule {}

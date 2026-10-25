@@ -360,3 +360,63 @@ export const channelMemberEvents = pgTable(
   },
   (t) => [index('channel_member_events_idx').on(t.channelId, t.occurredAt)],
 );
+
+// ---------------------------------------------------------------- Этап 7: AI
+
+/** Состояние подключения к AI-провайдеру по результату последней проверки. */
+export const aiStatus = pgEnum('ai_status', ['not_configured', 'unchecked', 'ok', 'error']);
+
+/**
+ * Настройки AI установки (одна строка, id = 1). Ключ — только в зашифрованном виде
+ * (crypto/secret-box.ts); в интерфейс возвращается маска.
+ */
+export const aiSettings = pgTable(
+  'ai_settings',
+  {
+    id: smallint('id').primaryKey().default(1),
+    enabled: boolean('enabled').notNull().default(false),
+    baseUrl: text('base_url').notNull().default('https://api.deepseek.com'),
+    model: text('model').notNull().default('deepseek-v4-flash'),
+    apiKeyEncrypted: text('api_key_encrypted'),
+    apiKeyMask: text('api_key_mask'),
+    useProxy: boolean('use_proxy').notNull().default(false),
+    /** Описание канала и стиля для подсказок AI (аудитория, тон, запреты). */
+    styleGuide: text('style_guide').notNull().default(''),
+    timeoutSeconds: integer('timeout_seconds').notNull().default(60),
+    maxOutputTokens: integer('max_output_tokens').notNull().default(2000),
+    dailyRequestLimit: integer('daily_request_limit').notNull().default(100),
+    /** Лимит токенов (вход + выход) в календарный месяц; null — без лимита. */
+    monthlyTokenLimit: integer('monthly_token_limit'),
+    /** Цены за 1 млн токенов в рублях (вводит владелец) — только для оценки расхода. */
+    priceInputPerMillion: integer('price_input_per_million'),
+    priceOutputPerMillion: integer('price_output_per_million'),
+    status: aiStatus('status').notNull().default('not_configured'),
+    lastCheckAt: timestamp('last_check_at', { withTimezone: true }),
+    lastError: text('last_error'),
+    ...timestamps,
+  },
+  (t) => [check('ai_settings_singleton', sql`${t.id} = 1`)],
+);
+
+export const aiRequestKind = pgEnum('ai_request_kind', ['test', 'text', 'plan', 'analytics']);
+
+/**
+ * Журнал запросов к AI для лимитов и учёта расхода. Тексты запросов и ответов
+ * не храним — только объёмы, длительность и код ошибки.
+ */
+export const aiRequests = pgTable(
+  'ai_requests',
+  {
+    id: bigserial('id', { mode: 'bigint' }).primaryKey(),
+    ownerId: uuid('owner_id').references(() => users.id, { onDelete: 'set null' }),
+    kind: aiRequestKind('kind').notNull(),
+    model: text('model').notNull(),
+    ok: boolean('ok').notNull(),
+    errorCode: text('error_code'),
+    promptTokens: integer('prompt_tokens'),
+    completionTokens: integer('completion_tokens'),
+    durationMs: integer('duration_ms').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('ai_requests_created_idx').on(t.createdAt)],
+);

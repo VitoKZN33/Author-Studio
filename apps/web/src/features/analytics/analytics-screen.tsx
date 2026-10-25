@@ -263,6 +263,16 @@ export function AnalyticsScreen() {
 
           {best && <BestTimeGrid data={best} onMetric={setMetric} />}
 
+          <Link
+            href="/ai/?tab=review"
+            className="flex min-h-12 items-center justify-between rounded-[var(--radius-card)] border border-border bg-surface px-4 text-sm hover:border-border-strong"
+          >
+            {t('aiReview')}
+            <span aria-hidden className="text-text-faint">
+              ›
+            </span>
+          </Link>
+
           <div className="flex flex-col gap-1">
             <button
               type="button"

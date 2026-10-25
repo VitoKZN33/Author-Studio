@@ -4,7 +4,13 @@ import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
 import { AuthGate } from '@/features/session/auth-gate';
-import { CURRENT_STAGE, MOBILE_TABS, SECTIONS, type SectionKey } from '../sections';
+import {
+  CURRENT_STAGE,
+  MOBILE_TABS,
+  POSTPONED_SECTIONS,
+  SECTIONS,
+  type SectionKey,
+} from '../sections';
 
 /**
  * Каркас приложения: боковая навигация на широком экране (Telegram Desktop),
@@ -16,7 +22,7 @@ export function AppShell({ active, children }: { active: SectionKey; children: R
   const items = SECTIONS.map((s) => ({
     ...s,
     label: t(`nav.${s.key}`),
-    available: s.stage <= CURRENT_STAGE,
+    available: s.stage <= CURRENT_STAGE && !POSTPONED_SECTIONS.includes(s.key),
   }));
 
   return (
@@ -34,7 +40,11 @@ export function AppShell({ active, children }: { active: SectionKey; children: R
                 item={item}
                 active={item.key === active}
                 variant="side"
-                soon={t('nav.soon', { stage: item.stage })}
+                soon={
+                  POSTPONED_SECTIONS.includes(item.key)
+                    ? t('nav.postponed')
+                    : t('nav.soon', { stage: item.stage })
+                }
               />
             ))}
           </nav>

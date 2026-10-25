@@ -15,6 +15,7 @@ import { api, ApiError } from '@/shared/api';
 import { confirmAction } from '@/shared/telegram';
 import type { Channel } from '../channels/types';
 import type { MediaView, PostView, PublicationView } from '../posts/types';
+import { EditorAiPanel } from '../ai/editor-ai-panel';
 import { useSystemInfo } from '../system/use-system-info';
 import { ButtonsPanel } from './buttons-panel';
 import { docToMessage, messageToDoc, type PMNode } from './convert';
@@ -123,6 +124,13 @@ function EditorLoaded({ initial }: { initial: PostView }) {
   function onDoc(nextDoc: PMNode) {
     setDoc(nextDoc);
     update({ ...content, ...docToMessage(nextDoc) });
+  }
+
+  /** Текст от AI (или возврат прежнего): редактор пересоздаётся из нового содержимого. */
+  function applyText(next: Pick<PostContent, 'text' | 'entities'>) {
+    setDoc(messageToDoc(next.text, next.entities));
+    setEditorKey((k) => k + 1);
+    update({ ...content, ...next });
   }
 
   function onMedia(items: MediaView[]) {
@@ -240,6 +248,11 @@ function EditorLoaded({ initial }: { initial: PostView }) {
               </span>
             </div>
           </div>
+          <EditorAiPanel
+            current={{ text: content.text, entities: content.entities }}
+            hasMedia={content.media.length > 0}
+            onApply={applyText}
+          />
           <MediaPanel items={orderedMedia} onChange={onMedia} />
           <ButtonsPanel
             rows={content.buttons}
