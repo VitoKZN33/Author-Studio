@@ -10,6 +10,8 @@ export const QUEUE_NAMES = {
   notifications: 'notifications',
   /** Отправка публикаций в каналы и реконсилятор расписания. */
   publications: 'publications',
+  /** Сбор метрик каналов по расписанию. */
+  metrics: 'metrics',
 } as const;
 export type QueueName = (typeof QUEUE_NAMES)[keyof typeof QUEUE_NAMES];
 

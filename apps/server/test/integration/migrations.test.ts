@@ -13,9 +13,13 @@ describe('миграции БД', () => {
     );
     expect(rows.map((r) => r.table_name)).toEqual([
       'audit_log',
+      'channel_member_events',
+      'channel_messages',
+      'channel_metric_snapshots',
       'channels',
       'installation_settings',
       'media_assets',
+      'message_metric_snapshots',
       'posts',
       'publication_attempts',
       'publications',

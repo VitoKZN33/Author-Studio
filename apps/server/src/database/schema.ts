@@ -5,6 +5,7 @@ import {
   bigserial,
   check,
   index,
+  boolean,
   integer,
   jsonb,
   pgEnum,
@@ -265,4 +266,97 @@ export const publicationAttempts = pgTable(
     description: text('description'),
   },
   (t) => [index('publication_attempts_publication_idx').on(t.publicationId)],
+);
+
+/**
+ * Источник значения метрики:
+ * telegram_api — значение, полученное от Telegram (запрос или обновление);
+ * manual       — введено владельцем вручную (просмотры, пересылки).
+ * Ряды и изменения во времени — измерения системы на основе этих снимков.
+ */
+export const metricSource = pgEnum('metric_source', ['telegram_api', 'manual']);
+
+/** Снимки показателей канала (число подписчиков). История — с момента установки. */
+export const channelMetricSnapshots = pgTable(
+  'channel_metric_snapshots',
+  {
+    id: bigserial('id', { mode: 'bigint' }).primaryKey(),
+    channelId: uuid('channel_id')
+      .notNull()
+      .references(() => channels.id, { onDelete: 'cascade' }),
+    metric: text('metric').notNull(),
+    value: integer('value').notNull(),
+    measuredAt: timestamp('measured_at', { withTimezone: true }).notNull().defaultNow(),
+    source: metricSource('source').notNull(),
+    /** Версия способа сбора: меняется, если меняется методика (сравнимость рядов). */
+    methodVersion: smallint('method_version').notNull().default(1),
+  },
+  (t) => [index('channel_metric_snapshots_idx').on(t.channelId, t.metric, t.measuredAt)],
+);
+
+/**
+ * Сообщения канала, известные системе: опубликованные через приложение и пришедшие
+ * в обновлениях channel_post (с момента добавления бота). Историю до этого Bot API не даёт.
+ */
+export const channelMessages = pgTable(
+  'channel_messages',
+  {
+    id: bigserial('id', { mode: 'bigint' }).primaryKey(),
+    channelId: uuid('channel_id')
+      .notNull()
+      .references(() => channels.id, { onDelete: 'cascade' }),
+    messageId: integer('message_id').notNull(),
+    postedAt: timestamp('posted_at', { withTimezone: true }).notNull(),
+    publicationId: uuid('publication_id').references(() => publications.id, {
+      onDelete: 'set null',
+    }),
+    mediaGroupId: text('media_group_id'),
+    summary: text('summary').notNull(),
+    hasMedia: boolean('has_media').notNull().default(false),
+    source: text('source').notNull(),
+  },
+  (t) => [
+    uniqueIndex('channel_messages_unique_idx').on(t.channelId, t.messageId),
+    index('channel_messages_posted_idx').on(t.channelId, t.postedAt),
+  ],
+);
+
+/** Снимки показателей сообщения: реакции (Telegram), просмотры и пересылки (вручную). */
+export const messageMetricSnapshots = pgTable(
+  'message_metric_snapshots',
+  {
+    id: bigserial('id', { mode: 'bigint' }).primaryKey(),
+    channelId: uuid('channel_id')
+      .notNull()
+      .references(() => channels.id, { onDelete: 'cascade' }),
+    messageId: integer('message_id').notNull(),
+    metric: text('metric').notNull(),
+    value: integer('value').notNull(),
+    details: jsonb('details').$type<Record<string, number>>(),
+    measuredAt: timestamp('measured_at', { withTimezone: true }).notNull().defaultNow(),
+    source: metricSource('source').notNull(),
+  },
+  (t) => [
+    index('message_metric_snapshots_idx').on(t.channelId, t.messageId, t.metric, t.measuredAt),
+  ],
+);
+
+/**
+ * Вступления и выходы из обновлений chat_member. Кто именно вступил — не храним
+ * (минимизация персональных данных); Telegram может присылать не все события.
+ */
+export const memberEventKind = pgEnum('member_event_kind', ['join', 'leave']);
+
+export const channelMemberEvents = pgTable(
+  'channel_member_events',
+  {
+    id: bigserial('id', { mode: 'bigint' }).primaryKey(),
+    channelId: uuid('channel_id')
+      .notNull()
+      .references(() => channels.id, { onDelete: 'cascade' }),
+    kind: memberEventKind('kind').notNull(),
+    occurredAt: timestamp('occurred_at', { withTimezone: true }).notNull(),
+    inviteLinkName: text('invite_link_name'),
+  },
+  (t) => [index('channel_member_events_idx').on(t.channelId, t.occurredAt)],
 );

@@ -1,6 +1,7 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import type { Update } from 'grammy/types';
 import { APP_CONFIG, type AppConfig } from '../config/config.module.js';
+import { AnalyticsIngestService } from '../analytics/ingest.service.js';
 import { ChannelsService } from '../channels/channels.service.js';
 import { TELEGRAM_CLIENT } from '../telegram/telegram.module.js';
 import type { TelegramClient } from '../telegram/telegram-client.js';
@@ -22,11 +23,24 @@ export class UpdateRouter {
     @Inject(APP_CONFIG) private readonly config: AppConfig,
     @Inject(TELEGRAM_CLIENT) private readonly telegram: TelegramClient | null,
     private readonly channels: ChannelsService,
+    private readonly analytics: AnalyticsIngestService,
   ) {}
 
   async handle(update: Update): Promise<void> {
     if (update.my_chat_member) {
       await this.channels.onBotMembershipChanged(update.my_chat_member);
+      return;
+    }
+    if (update.channel_post) {
+      await this.analytics.onChannelPost(update.channel_post);
+      return;
+    }
+    if (update.message_reaction_count) {
+      await this.analytics.onReactionCount(update.message_reaction_count);
+      return;
+    }
+    if (update.chat_member) {
+      if (this.telegram) await this.analytics.onChatMember(update.chat_member, this.telegram.botId);
       return;
     }
     const msg = update.message;

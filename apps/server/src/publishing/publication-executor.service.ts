@@ -3,6 +3,7 @@ import { summarizeContent, validatePostContent, type PostContent } from '@author
 import type { Queue } from 'bullmq';
 import { and, eq, lt, sql } from 'drizzle-orm';
 import { access } from 'node:fs/promises';
+import { AnalyticsIngestService } from '../analytics/ingest.service.js';
 import { AuditService } from '../audit/audit.service.js';
 import { DB, type Database } from '../database/database.module.js';
 import { channels, posts, publicationAttempts, publications } from '../database/schema.js';
@@ -78,6 +79,7 @@ export class PublicationExecutor {
     private readonly media: MediaService,
     private readonly notifications: NotificationsService,
     private readonly audit: AuditService,
+    private readonly analytics: AnalyticsIngestService,
   ) {}
 
   private async claim(publicationId: string): Promise<Claimed | null> {
@@ -215,6 +217,11 @@ export class PublicationExecutor {
         })
         .where(eq(publications.id, c.id));
       await this.finishAttempt(c.attemptId, 'ok');
+      await this.analytics
+        .recordPublished(c.channel.id, c.id, messageIds, c.content)
+        .catch((err: Error) =>
+          this.logger.warn({ err: err.message }, 'Сообщение не записано в аналитику'),
+        );
       await this.audit.record({
         action: 'publication.sent',
         entityType: 'publication',

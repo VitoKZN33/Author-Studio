@@ -15,6 +15,8 @@ import { APP_CONFIG, type AppConfig } from '../config/config.module.js';
 import { DB, type Database } from '../database/database.module.js';
 import { channels, users, type BotRightsSnapshot } from '../database/schema.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
+import { METRICS_QUEUE } from '../queue/queue.module.js';
+import type { Queue } from 'bullmq';
 import { TELEGRAM_CLIENT } from '../telegram/telegram.module.js';
 import { TelegramApiError, type TelegramClient } from '../telegram/telegram-client.js';
 import {
@@ -70,6 +72,7 @@ export class ChannelsService {
     @Inject(TELEGRAM_CLIENT) private readonly telegram: TelegramClient | null,
     private readonly audit: AuditService,
     private readonly notifications: NotificationsService,
+    @Inject(METRICS_QUEUE) private readonly metricsQueue: Queue,
   ) {}
 
   private client(): TelegramClient {
@@ -226,6 +229,14 @@ export class ChannelsService {
       entityId: row!.id,
       metadata: { status, missing: missingRequiredRights(rights) },
     });
+    // Первый снимок числа подписчиков — сразу после подключения.
+    await this.metricsQueue
+      .add(
+        'collect-channel',
+        { channelId: row!.id },
+        { jobId: `collect-${row!.id}-${Math.floor(Date.now() / 60_000)}` },
+      )
+      .catch(() => undefined);
     return toView(row!);
   }
 

@@ -41,6 +41,8 @@ export const envSchema = z
     DATABASE_URL: z
       .string({ error: 'не задан' })
       .regex(/^postgres(ql)?:\/\//, { error: 'ожидается адрес вида postgresql://…' }),
+    /** Как часто снимать число подписчиков каналов, минут. */
+    METRICS_SUBSCRIBERS_INTERVAL_MINUTES: z.coerce.number().int().min(5).max(1440).default(30),
     /** Каталог медиафайлов (том Docker, общий для api и worker). */
     MEDIA_DIR: z.string().min(1).default('/var/lib/author-studio/media'),
     DATABASE_POOL_MAX: z.coerce.number().int().min(1).max(100).default(10),
